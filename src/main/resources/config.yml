@@ -1,0 +1,44 @@
+# =========================================================
+#  DuckHunt configuration
+# =========================================================
+
+# Duck spawn points. Each one is a coordinate the plugin will spawn a
+# zombie + invisible armor stand + minecart combo on.
+#
+# You normally don't need to edit this by hand: stand where you want a
+# duck to appear and run "/duckhunt setspawn <id>" in-game. That command
+# writes an entry here automatically. You can still add or tweak entries
+# manually if you prefer, following this layout:
+#
+# spawn-points:
+#   duck1:
+#     world: world
+#     x: 0.5
+#     y: 65.0
+#     z: 0.0
+#     yaw: 0.0
+spawn-points: {}
+
+# Stats applied to every zombie ("duck") that gets spawned.
+duck:
+  # Max health / current health of the zombie. Lower = dies in fewer hits.
+  health: 2.0
+  # Base movement speed attribute. Purely cosmetic here since the zombie
+  # is a passenger and doesn't walk on its own, but kept for completeness
+  # in case you disable riding logic in your own code later.
+  movement-speed: 0.23
+  # Whether the zombie keeps vanilla AI (targeting/attacking players).
+  # Most duck-hunt setups want this off so the zombie is a passive target.
+  ai-enabled: false
+  # Whether the zombie is silent (no growl/hurt sounds).
+  silent: true
+  # Whether the zombie glows (useful while testing spawn points).
+  glowing: false
+
+# Automatic spawning: periodically re-fills every empty spawn point.
+auto-spawn:
+  enabled: false
+  interval-seconds: 20
+
+# Broadcasts a message to the whole server whenever a duck is killed.
+broadcast-kill: true

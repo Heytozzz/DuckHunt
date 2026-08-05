@@ -1,0 +1,45 @@
+# Traducciones al español para DuckHunt.
+# El formato usa etiquetas MiniMessage, ej: <green>...</green>.
+# Los marcadores como <id> son reemplazados por el plugin, no los borres.
+
+prefix: "<gray>[<green>DuckHunt</green>]</gray> "
+
+reload:
+  success: "<green>Configuración recargada.</green>"
+
+permission:
+  denied: "<red>No tienes permiso para hacer eso.</red>"
+
+spawnpoint:
+  set: "<green>Punto de aparición <yellow><id></yellow> guardado en tu ubicación.</green>"
+  removed: "<green>Punto de aparición <yellow><id></yellow> eliminado.</green>"
+  not-found: "<red>No se encontró el punto de aparición <yellow><id></yellow>.</red>"
+  list-header: "<green>Puntos de aparición configurados:</green>"
+  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray>"
+  list-empty: "<yellow>Todavía no hay puntos de aparición configurados. Usa /duckhunt setspawn [id].</yellow>"
+
+spawn:
+  success: "<green>Pato generado en <yellow><id></yellow>.</green>"
+  all-success: "<green>Se generaron <yellow><count></yellow> pato(s).</green>"
+  occupied: "<yellow>El punto de aparición <yellow><id></yellow> ya está ocupado.</yellow>"
+
+cleared: "<green>Se eliminaron todos los patos.</green>"
+
+auto:
+  started: "<green>Generación automática iniciada.</green>"
+  stopped: "<yellow>Generación automática detenida.</yellow>"
+  already-running: "<yellow>La generación automática ya está activa.</yellow>"
+  already-stopped: "<yellow>La generación automática ya está detenida.</yellow>"
+
+kill:
+  broadcast: "<yellow><player></yellow> <green>¡cazó un pato!</green>"
+
+usage:
+  main: "<yellow>Uso: /duckhunt [setspawn|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
+  setspawn: "<yellow>Uso: /duckhunt setspawn [id]</yellow>"
+  removespawn: "<yellow>Uso: /duckhunt removespawn [id]</yellow>"
+  spawn: "<yellow>Uso: /duckhunt spawn [id|all]</yellow>"
+
+error:
+  players-only: "<red>Este comando solo puede usarse en el juego.</red>"
+  unknown-subcommand: "<red>Subcomando desconocido.</red>"

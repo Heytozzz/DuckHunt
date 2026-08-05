@@ -1,0 +1,45 @@
+# English translations for DuckHunt.
+# Formatting uses MiniMessage tags, e.g. <green>...</green>.
+# Placeholders like <id> are substituted by the plugin, keep them as-is.
+
+prefix: "<gray>[<green>DuckHunt</green>]</gray> "
+
+reload:
+  success: "<green>Configuration reloaded.</green>"
+
+permission:
+  denied: "<red>You don't have permission to do that.</red>"
+
+spawnpoint:
+  set: "<green>Spawn point <yellow><id></yellow> saved at your location.</green>"
+  removed: "<green>Spawn point <yellow><id></yellow> removed.</green>"
+  not-found: "<red>Spawn point <yellow><id></yellow> was not found.</red>"
+  list-header: "<green>Configured spawn points:</green>"
+  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray>"
+  list-empty: "<yellow>There are no spawn points configured yet. Use /duckhunt setspawn [id].</yellow>"
+
+spawn:
+  success: "<green>Duck spawned at <yellow><id></yellow>.</green>"
+  all-success: "<green>Spawned <yellow><count></yellow> duck(s).</green>"
+  occupied: "<yellow>Spawn point <yellow><id></yellow> is already occupied.</yellow>"
+
+cleared: "<green>All ducks have been removed.</green>"
+
+auto:
+  started: "<green>Automatic spawning started.</green>"
+  stopped: "<yellow>Automatic spawning stopped.</yellow>"
+  already-running: "<yellow>Automatic spawning is already running.</yellow>"
+  already-stopped: "<yellow>Automatic spawning is already stopped.</yellow>"
+
+kill:
+  broadcast: "<yellow><player></yellow> <green>caught a duck!</green>"
+
+usage:
+  main: "<yellow>Usage: /duckhunt [setspawn|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
+  setspawn: "<yellow>Usage: /duckhunt setspawn [id]</yellow>"
+  removespawn: "<yellow>Usage: /duckhunt removespawn [id]</yellow>"
+  spawn: "<yellow>Usage: /duckhunt spawn [id|all]</yellow>"
+
+error:
+  players-only: "<red>This command can only be used by a player.</red>"
+  unknown-subcommand: "<red>Unknown subcommand.</red>"
