@@ -50,6 +50,8 @@ public final class DuckHuntPlugin extends JavaPlugin {
             autoSpawnManager.start(configManager.getAutoSpawnIntervalSeconds());
         }
 
+        duckSpawner.startPathFollowing();
+
         getLogger().info("DuckHunt enabled.");
     }
 
@@ -57,6 +59,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
     public void onDisable() {
         if (autoSpawnManager != null) {
             autoSpawnManager.stop();
+        }
+        if (duckSpawner != null) {
+            duckSpawner.stopPathFollowing();
         }
         getLogger().info("DuckHunt disabled.");
     }

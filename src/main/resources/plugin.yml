@@ -4,15 +4,15 @@ main: dev.heytozzz.duckhunt.DuckHuntPlugin
 api-version: '26.2'
 author: Heytozzz
 description: >-
-  A duck-hunting minigame where "ducks" are zombies riding invisible armor
-  stands mounted on minecarts.
+  A duck-hunting minigame where "ducks" are zombies that patrol a chain of
+  waypoints using real pathfinding AI.
 website: https://github.com/Heytozzz/DuckHunt
 load: POSTWORLD
 
 commands:
   duckhunt:
     description: Manage the DuckHunt minigame.
-    usage: '/<command> <setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload>'
+    usage: '/<command> <setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload|add|path>'
     permission: duckhunt.admin
     aliases: [dh]
 

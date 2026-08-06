@@ -11,8 +11,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 
 /**
- * Listens for duck (zombie) deaths and cleans up the armor stand and
- * minecart it was riding on.
+ * Listens for duck (zombie) deaths, frees up its spawn point's capacity
+ * and (if enabled) broadcasts the kill.
  */
 public class DuckDeathListener implements Listener {
 

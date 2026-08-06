@@ -16,7 +16,7 @@ spawnpoint:
   removed: "<green>Punto de aparición <yellow><id></yellow> eliminado.</green>"
   not-found: "<red>No se encontró el punto de aparición <yellow><id></yellow>.</red>"
   list-header: "<green>Puntos de aparición configurados:</green>"
-  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount></gray>"
+  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount> <dark_gray>[<waypoints> waypoint(s)]</dark_gray></gray>"
   list-empty: "<yellow>Todavía no hay puntos de aparición configurados. Usa /duckhunt setspawn [id].</yellow>"
 
 spawn:
@@ -35,14 +35,27 @@ auto:
 kill:
   broadcast: "<yellow><player></yellow> <green>¡cazó un pato!</green>"
 
+path:
+  added: "<green>Waypoint añadido al camino de <yellow><id></yellow> (<yellow><count></yellow> en total).</green>"
+  removed: "<green>Waypoint <yellow><index></yellow> eliminado del camino de <yellow><id></yellow>.</green>"
+  invalid-index: "<red>El punto de aparición <yellow><id></yellow> no tiene el waypoint <yellow><index></yellow>.</red>"
+  cleared: "<green>Se vació el camino de waypoints de <yellow><id></yellow>.</green>"
+  mode-set: "<green>El modo de camino de <yellow><id></yellow> ahora es <yellow><mode></yellow>.</green>"
+  list-header: "<green>Waypoints de <yellow><id></yellow>:</green>"
+  list-entry: "<gray> - <yellow>#<index></yellow> <dark_gray>(<x>, <y>, <z>)</dark_gray>"
+  list-empty: "<yellow>El punto de aparición <yellow><id></yellow> todavía no tiene waypoints. Usa /duckhunt add path <id>.</yellow>"
+
 usage:
-  main: "<yellow>Uso: /duckhunt [setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
+  main: "<yellow>Uso: /duckhunt [setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload|add|path]</yellow>"
   setspawn: "<yellow>Uso: /duckhunt setspawn [id] [amount]</yellow>"
   setamount: "<yellow>Uso: /duckhunt setamount [id] [amount]</yellow>"
   removespawn: "<yellow>Uso: /duckhunt removespawn [id]</yellow>"
   spawn: "<yellow>Uso: /duckhunt spawn [id|all]</yellow>"
+  addpath: "<yellow>Uso: /duckhunt add path [id]</yellow>"
+  path: "<yellow>Uso: /duckhunt path [list|remove|clear|mode] [id] [índice|modo]</yellow>"
 
 error:
   players-only: "<red>Este comando solo puede usarse en el juego.</red>"
   unknown-subcommand: "<red>Subcomando desconocido.</red>"
   invalid-amount: "<red>La cantidad debe ser un número entero de 1 o más.</red>"
+  invalid-path-mode: "<red>Modo de camino inválido. Usa loop, pingpong o stop.</red>"

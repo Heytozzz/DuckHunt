@@ -1,22 +1,29 @@
 # =========================================================
 #  DuckHunt configuration
 # =========================================================
-# Spawn point locations live in their own file: spawnpoints.yml.
+# Spawn point locations and waypoint paths live in their own file:
+# spawnpoints.yml.
 
 # Stats applied to every zombie ("duck") that gets spawned.
 duck:
   # Max health / current health of the zombie. Lower = dies in fewer hits.
   health: 2.0
-  # Base movement speed attribute. Purely cosmetic here since the zombie
-  # is a passenger and doesn't walk on its own, but kept for completeness
-  # in case you disable riding logic in your own code later.
+  # Base movement speed attribute AND the speed used by the pathfinder
+  # when "ai-enabled" is true (see below). Typical walking speed is
+  # around 0.2-0.3.
   movement-speed: 0.23
-  # Whether the zombie keeps vanilla AI (targeting/attacking players).
-  # Most duck-hunt setups want this off so the zombie is a passive target.
+  # Whether the duck actively patrols its spawn point's waypoint path
+  # using real pathfinding AI (dodges obstacles, climbs stairs, etc.).
+  # - true:  the duck's default zombie AI (attacking, wandering...) is
+  #          wiped, and it's driven only by its waypoint path instead.
+  #          If a spawn point has no extra waypoints, it just stands at
+  #          its spawn location.
+  # - false: the duck has no AI at all and stays completely still,
+  #          regardless of any configured path (legacy behaviour).
   ai-enabled: false
   # Whether the zombie is silent (no growl/hurt sounds).
   silent: true
-  # Whether the zombie glows (useful while testing spawn points).
+  # Whether the zombie glows (useful while testing spawn points/paths).
   glowing: false
 
 spawn:
@@ -28,6 +35,17 @@ spawn:
   # at the same point instead of waiting for the next auto-spawn cycle or
   # a manual "/duckhunt spawn".
   instant-respawn: false
+  # What a duck does after reaching the last waypoint of its path.
+  # Individual spawn points can override this in spawnpoints.yml (or via
+  # "/duckhunt path mode <id> <mode>").
+  #   loop     - goes back to the first waypoint (its spawn point) and starts over.
+  #   pingpong - walks the path backwards until it reaches the start, then forwards again.
+  #   stop     - stays put once it reaches the last waypoint.
+  default-path-mode: loop
+  # How often (in ticks, 20 ticks = 1 second) the plugin checks whether
+  # each duck has reached its current waypoint and needs to be sent to
+  # the next one. Lower = more responsive, slightly more overhead.
+  path-check-interval-ticks: 10
 
 # Automatic spawning: periodically re-fills every spawn point that's
 # below its configured amount.

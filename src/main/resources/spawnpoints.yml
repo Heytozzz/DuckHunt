@@ -1,13 +1,24 @@
 # =========================================================
 #  DuckHunt spawn points
 # =========================================================
-# You normally don't need to edit this by hand: stand where you want a
-# duck to appear and run "/duckhunt setspawn <id> [amount]" in-game.
-# That command writes an entry here automatically.
+# You normally don't need to edit this by hand:
+#
+# 1. Stand where you want a duck to appear and run
+#    "/duckhunt setspawn <id> [amount]" in-game. That command writes an
+#    entry here automatically.
+# 2. Optionally, walk to each point you want the duck to patrol through
+#    (in order) and run "/duckhunt add path <id>" at each one to build
+#    its waypoint chain. If a point has no waypoints, its duck just
+#    stands still at the spawn location.
+# 3. Manage waypoints with "/duckhunt path list|remove|clear <id>" and
+#    the loop/pingpong/stop behaviour with "/duckhunt path mode <id> <mode>".
 #
 # "amount" is optional per spawn point. Omit it (or use
 # "/duckhunt setamount <id> <amount>" to change it later) to fall back to
 # "spawn.default-amount" in config.yml.
+#
+# "path-mode" is optional per spawn point. Omit it to fall back to
+# "spawn.default-path-mode" in config.yml.
 #
 # Manual layout reference, if you'd rather edit this by hand:
 #
@@ -19,4 +30,12 @@
 #     z: 0.0
 #     yaw: 0.0
 #     amount: 3
+#     path-mode: loop
+#     path:
+#       - x: 5.5
+#         y: 65.0
+#         z: 0.0
+#       - x: 5.5
+#         y: 65.0
+#         z: 8.0
 points: {}

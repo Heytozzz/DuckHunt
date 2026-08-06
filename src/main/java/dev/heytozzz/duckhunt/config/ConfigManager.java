@@ -1,12 +1,13 @@
 package dev.heytozzz.duckhunt.config;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.spawn.PathMode;
 import org.bukkit.configuration.file.FileConfiguration;
 
 /**
  * Loads settings from config.yml: duck stats, spawn defaults,
- * auto-spawn behaviour and misc options. Spawn points themselves live in
- * {@link SpawnPointManager} / spawnpoints.yml.
+ * auto-spawn behaviour and misc options. Spawn points (and their
+ * waypoint paths) live in {@link SpawnPointManager} / spawnpoints.yml.
  */
 public class ConfigManager {
 
@@ -20,6 +21,8 @@ public class ConfigManager {
 
     private int defaultDuckAmount;
     private boolean instantRespawn;
+    private PathMode defaultPathMode;
+    private int pathCheckIntervalTicks;
 
     private boolean autoSpawnEnabled;
     private int autoSpawnIntervalSeconds;
@@ -47,6 +50,13 @@ public class ConfigManager {
         defaultDuckAmount = Math.max(1, config.getInt("spawn.default-amount", 1));
         instantRespawn = config.getBoolean("spawn.instant-respawn", false);
 
+        defaultPathMode = PathMode.parse(config.getString("spawn.default-path-mode", "loop"));
+        if (defaultPathMode == null) {
+            plugin.getLogger().warning("Invalid 'spawn.default-path-mode' in config.yml, falling back to 'loop'.");
+            defaultPathMode = PathMode.LOOP;
+        }
+        pathCheckIntervalTicks = Math.max(1, config.getInt("spawn.path-check-interval-ticks", 10));
+
         autoSpawnEnabled = config.getBoolean("auto-spawn.enabled", false);
         autoSpawnIntervalSeconds = config.getInt("auto-spawn.interval-seconds", 20);
 
@@ -61,6 +71,13 @@ public class ConfigManager {
         return duckMovementSpeed;
     }
 
+    /**
+     * Whether ducks actively patrol their spawn point's waypoint path
+     * using real pathfinding AI. When false, ducks stay put at their
+     * spawn point (their default vanilla goals are also left untouched
+     * in that case, though {@code duck.ai-enabled: false} already keeps
+     * them passive via {@code Zombie#setAI(false)}).
+     */
     public boolean isDuckAiEnabled() {
         return duckAiEnabled;
     }
@@ -88,6 +105,23 @@ public class ConfigManager {
      */
     public boolean isInstantRespawn() {
         return instantRespawn;
+    }
+
+    /**
+     * Server-wide default for what a duck does after reaching the last
+     * waypoint of its path, used whenever a spawn point doesn't define
+     * its own "path-mode" override.
+     */
+    public PathMode getDefaultPathMode() {
+        return defaultPathMode;
+    }
+
+    /**
+     * How often (in ticks) the path-following task checks whether each
+     * duck needs to be sent to its next waypoint.
+     */
+    public int getPathCheckIntervalTicks() {
+        return pathCheckIntervalTicks;
     }
 
     public boolean isAutoSpawnEnabled() {

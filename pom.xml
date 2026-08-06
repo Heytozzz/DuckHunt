@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>DuckHunt</name>
-    <description>Duck-hunting minigame plugin: zombies ("ducks") ride invisible armor stands mounted on minecarts.</description>
+    <description>Duck-hunting minigame plugin: zombies ("ducks") patrol a chain of waypoints using pathfinding AI.</description>
     <url>https://github.com/Heytozzz/DuckHunt</url>
 
     <properties>
