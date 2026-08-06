@@ -4,7 +4,7 @@ import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 /**
- * Periodically calls {@link DuckSpawner#spawnAll()} to keep every
+ * Periodically calls {@link DuckSpawner#fillAll()} to keep every
  * configured spawn point filled with a duck.
  */
 public class AutoSpawnManager {
@@ -27,7 +27,7 @@ public class AutoSpawnManager {
         long ticks = Math.max(20L, intervalSeconds * 20L);
         task = plugin.getServer().getScheduler().runTaskTimer(
                 plugin,
-                () -> plugin.getDuckSpawner().spawnAll(),
+                () -> plugin.getDuckSpawner().fillAll(),
                 ticks,
                 ticks
         );
