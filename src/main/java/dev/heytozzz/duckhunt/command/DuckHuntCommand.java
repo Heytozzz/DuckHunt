@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
-            "setspawn", "removespawn", "list", "spawn", "clear", "start", "stop", "reload"
+            "setspawn", "setamount", "removespawn", "list", "spawn", "clear", "start", "stop", "reload"
     );
 
     private final DuckHuntPlugin plugin;
@@ -43,6 +43,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "setspawn" -> handleSetSpawn(sender, args);
+            case "setamount" -> handleSetAmount(sender, args);
             case "removespawn" -> handleRemoveSpawn(sender, args);
             case "list" -> handleList(sender);
             case "spawn" -> handleSpawn(sender, args);
@@ -66,16 +67,58 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         }
 
         String id = args[1];
+
+        // Optional 3rd argument: per-spawn-point duck amount override.
+        Integer amount = null;
+        if (args.length >= 3) {
+            Integer parsed = parseAmount(args[2]);
+            if (parsed == null) {
+                plugin.getLangManager().send(sender, "error.invalid-amount");
+                return;
+            }
+            amount = parsed;
+        }
+
         SpawnPoint point = new SpawnPoint(
                 id,
                 player.getWorld().getName(),
                 player.getLocation().getX(),
                 player.getLocation().getY(),
                 player.getLocation().getZ(),
-                player.getLocation().getYaw()
+                player.getLocation().getYaw(),
+                amount
         );
-        plugin.getConfigManager().saveSpawnPoint(point);
+        plugin.getSpawnPointManager().save(point);
         plugin.getLangManager().send(sender, "spawnpoint.set", Placeholder.unparsed("id", id));
+    }
+
+    private void handleSetAmount(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.setamount");
+            return;
+        }
+
+        String id = args[1];
+        SpawnPoint existing = plugin.getSpawnPointManager().get(id);
+        if (existing == null) {
+            plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", id));
+            return;
+        }
+
+        Integer amount = parseAmount(args[2]);
+        if (amount == null) {
+            plugin.getLangManager().send(sender, "error.invalid-amount");
+            return;
+        }
+
+        SpawnPoint updated = new SpawnPoint(
+                existing.id(), existing.worldName(), existing.x(), existing.y(), existing.z(),
+                existing.yaw(), amount
+        );
+        plugin.getSpawnPointManager().save(updated);
+        plugin.getLangManager().send(sender, "spawnpoint.amount-set",
+                Placeholder.unparsed("id", id),
+                Placeholder.unparsed("amount", String.valueOf(amount)));
     }
 
     private void handleRemoveSpawn(CommandSender sender, String[] args) {
@@ -85,7 +128,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         }
 
         String id = args[1];
-        if (plugin.getConfigManager().removeSpawnPoint(id)) {
+        if (plugin.getSpawnPointManager().remove(id)) {
             plugin.getLangManager().send(sender, "spawnpoint.removed", Placeholder.unparsed("id", id));
         } else {
             plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", id));
@@ -93,20 +136,25 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleList(CommandSender sender) {
-        var spawnPoints = plugin.getConfigManager().getSpawnPoints();
+        var spawnPoints = plugin.getSpawnPointManager().getSpawnPoints();
         if (spawnPoints.isEmpty()) {
             plugin.getLangManager().send(sender, "spawnpoint.list-empty");
             return;
         }
 
         plugin.getLangManager().send(sender, "spawnpoint.list-header");
+        int defaultAmount = plugin.getConfigManager().getDefaultDuckAmount();
         for (SpawnPoint point : spawnPoints.values()) {
+            int active = plugin.getDuckSpawner().getActiveCount(point.id());
+            int capacity = point.effectiveAmount(defaultAmount);
             plugin.getLangManager().send(sender, "spawnpoint.list-entry",
                     Placeholder.unparsed("id", point.id()),
                     Placeholder.unparsed("world", point.worldName()),
                     Placeholder.unparsed("x", format(point.x())),
                     Placeholder.unparsed("y", format(point.y())),
-                    Placeholder.unparsed("z", format(point.z())));
+                    Placeholder.unparsed("z", format(point.z())),
+                    Placeholder.unparsed("active", String.valueOf(active)),
+                    Placeholder.unparsed("amount", String.valueOf(capacity)));
         }
     }
 
@@ -118,25 +166,27 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
         String id = args[1];
         if (id.equalsIgnoreCase("all")) {
-            int spawned = plugin.getDuckSpawner().spawnAll();
+            int spawned = plugin.getDuckSpawner().fillAll();
             plugin.getLangManager().send(sender, "spawn.all-success",
                     Placeholder.unparsed("count", String.valueOf(spawned)));
             return;
         }
 
-        SpawnPoint point = plugin.getConfigManager().getSpawnPoints().get(id);
+        SpawnPoint point = plugin.getSpawnPointManager().get(id);
         if (point == null) {
             plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", id));
             return;
         }
 
-        if (plugin.getDuckSpawner().isOccupied(id)) {
-            plugin.getLangManager().send(sender, "spawn.occupied", Placeholder.unparsed("id", id));
+        int spawned = plugin.getDuckSpawner().fill(point);
+        if (spawned == 0) {
+            plugin.getLangManager().send(sender, "spawn.already-full", Placeholder.unparsed("id", id));
             return;
         }
 
-        plugin.getDuckSpawner().spawn(point);
-        plugin.getLangManager().send(sender, "spawn.success", Placeholder.unparsed("id", id));
+        plugin.getLangManager().send(sender, "spawn.success",
+                Placeholder.unparsed("id", id),
+                Placeholder.unparsed("count", String.valueOf(spawned)));
     }
 
     private void handleClear(CommandSender sender) {
@@ -164,8 +214,19 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
     private void handleReload(CommandSender sender) {
         plugin.getConfigManager().load();
+        plugin.getSpawnPointManager().load();
         plugin.getLangManager().load();
         plugin.getLangManager().send(sender, "reload.success");
+    }
+
+    @Nullable
+    private Integer parseAmount(String raw) {
+        try {
+            int value = Integer.parseInt(raw);
+            return value >= 1 ? value : null;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private String format(double value) {
@@ -185,8 +246,8 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 2) {
             String sub = args[0].toLowerCase(Locale.ROOT);
-            if (sub.equals("removespawn") || sub.equals("spawn")) {
-                List<String> ids = new ArrayList<>(plugin.getConfigManager().getSpawnPoints().keySet());
+            if (sub.equals("removespawn") || sub.equals("setamount") || sub.equals("spawn")) {
+                List<String> ids = new ArrayList<>(plugin.getSpawnPointManager().getSpawnPoints().keySet());
                 if (sub.equals("spawn")) {
                     ids.add("all");
                 }

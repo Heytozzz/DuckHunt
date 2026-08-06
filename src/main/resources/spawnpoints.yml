@@ -1,0 +1,22 @@
+# =========================================================
+#  DuckHunt spawn points
+# =========================================================
+# You normally don't need to edit this by hand: stand where you want a
+# duck to appear and run "/duckhunt setspawn <id> [amount]" in-game.
+# That command writes an entry here automatically.
+#
+# "amount" is optional per spawn point. Omit it (or use
+# "/duckhunt setamount <id> <amount>" to change it later) to fall back to
+# "spawn.default-amount" in config.yml.
+#
+# Manual layout reference, if you'd rather edit this by hand:
+#
+# points:
+#   duck1:
+#     world: world
+#     x: 0.5
+#     y: 65.0
+#     z: 0.0
+#     yaw: 0.0
+#     amount: 3
+points: {}

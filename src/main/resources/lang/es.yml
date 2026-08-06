@@ -12,16 +12,17 @@ permission:
 
 spawnpoint:
   set: "<green>Punto de aparición <yellow><id></yellow> guardado en tu ubicación.</green>"
+  amount-set: "<green>El punto de aparición <yellow><id></yellow> ahora mantiene hasta <yellow><amount></yellow> pato(s) a la vez.</green>"
   removed: "<green>Punto de aparición <yellow><id></yellow> eliminado.</green>"
   not-found: "<red>No se encontró el punto de aparición <yellow><id></yellow>.</red>"
   list-header: "<green>Puntos de aparición configurados:</green>"
-  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray>"
+  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount></gray>"
   list-empty: "<yellow>Todavía no hay puntos de aparición configurados. Usa /duckhunt setspawn [id].</yellow>"
 
 spawn:
-  success: "<green>Pato generado en <yellow><id></yellow>.</green>"
-  all-success: "<green>Se generaron <yellow><count></yellow> pato(s).</green>"
-  occupied: "<yellow>El punto de aparición <yellow><id></yellow> ya está ocupado.</yellow>"
+  success: "<green>Se generaron <yellow><count></yellow> pato(s) en <yellow><id></yellow>.</green>"
+  all-success: "<green>Se generaron <yellow><count></yellow> pato(s) en total.</green>"
+  already-full: "<yellow>El punto de aparición <yellow><id></yellow> ya está a máxima capacidad.</yellow>"
 
 cleared: "<green>Se eliminaron todos los patos.</green>"
 
@@ -35,11 +36,13 @@ kill:
   broadcast: "<yellow><player></yellow> <green>¡cazó un pato!</green>"
 
 usage:
-  main: "<yellow>Uso: /duckhunt [setspawn|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
-  setspawn: "<yellow>Uso: /duckhunt setspawn [id]</yellow>"
+  main: "<yellow>Uso: /duckhunt [setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
+  setspawn: "<yellow>Uso: /duckhunt setspawn [id] [amount]</yellow>"
+  setamount: "<yellow>Uso: /duckhunt setamount [id] [amount]</yellow>"
   removespawn: "<yellow>Uso: /duckhunt removespawn [id]</yellow>"
   spawn: "<yellow>Uso: /duckhunt spawn [id|all]</yellow>"
 
 error:
   players-only: "<red>Este comando solo puede usarse en el juego.</red>"
   unknown-subcommand: "<red>Subcomando desconocido.</red>"
+  invalid-amount: "<red>La cantidad debe ser un número entero de 1 o más.</red>"

@@ -1,23 +1,7 @@
 # =========================================================
 #  DuckHunt configuration
 # =========================================================
-
-# Duck spawn points. Each one is a coordinate the plugin will spawn a
-# zombie + invisible armor stand + minecart combo on.
-#
-# You normally don't need to edit this by hand: stand where you want a
-# duck to appear and run "/duckhunt setspawn <id>" in-game. That command
-# writes an entry here automatically. You can still add or tweak entries
-# manually if you prefer, following this layout:
-#
-# spawn-points:
-#   duck1:
-#     world: world
-#     x: 0.5
-#     y: 65.0
-#     z: 0.0
-#     yaw: 0.0
-spawn-points: {}
+# Spawn point locations live in their own file: spawnpoints.yml.
 
 # Stats applied to every zombie ("duck") that gets spawned.
 duck:
@@ -35,7 +19,18 @@ duck:
   # Whether the zombie glows (useful while testing spawn points).
   glowing: false
 
-# Automatic spawning: periodically re-fills every empty spawn point.
+spawn:
+  # Default number of ducks kept alive at once per spawn point. Individual
+  # spawn points can override this in spawnpoints.yml (or via
+  # "/duckhunt setspawn <id> <amount>" / "/duckhunt setamount <id> <amount>").
+  default-amount: 1
+  # If true, the instant a duck dies, a replacement duck spawns right away
+  # at the same point instead of waiting for the next auto-spawn cycle or
+  # a manual "/duckhunt spawn".
+  instant-respawn: false
+
+# Automatic spawning: periodically re-fills every spawn point that's
+# below its configured amount.
 auto-spawn:
   enabled: false
   interval-seconds: 20

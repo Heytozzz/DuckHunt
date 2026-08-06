@@ -2,6 +2,7 @@ package dev.heytozzz.duckhunt;
 
 import dev.heytozzz.duckhunt.command.DuckHuntCommand;
 import dev.heytozzz.duckhunt.config.ConfigManager;
+import dev.heytozzz.duckhunt.config.SpawnPointManager;
 import dev.heytozzz.duckhunt.lang.LangManager;
 import dev.heytozzz.duckhunt.listener.DuckDeathListener;
 import dev.heytozzz.duckhunt.spawn.AutoSpawnManager;
@@ -13,6 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class DuckHuntPlugin extends JavaPlugin {
 
     private ConfigManager configManager;
+    private SpawnPointManager spawnPointManager;
     private LangManager langManager;
     private DuckSpawner duckSpawner;
     private AutoSpawnManager autoSpawnManager;
@@ -23,6 +25,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
         this.configManager = new ConfigManager(this);
         this.configManager.load();
+
+        this.spawnPointManager = new SpawnPointManager(this);
+        this.spawnPointManager.load();
 
         this.langManager = new LangManager(this);
         this.langManager.load();
@@ -58,6 +63,10 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public SpawnPointManager getSpawnPointManager() {
+        return spawnPointManager;
     }
 
     public LangManager getLangManager() {

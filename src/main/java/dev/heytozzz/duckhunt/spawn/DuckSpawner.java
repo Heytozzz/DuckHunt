@@ -16,62 +16,47 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Handles spawning and despawning of "duck" mob groups: a {@link Zombie}
  * riding an invisible {@link ArmorStand} riding a {@link RideableMinecart}.
+ * Each spawn point can keep several ducks alive at once, up to its
+ * configured capacity.
  */
 public class DuckSpawner {
 
     private final DuckHuntPlugin plugin;
     private final ConfigManager config;
 
-    // spawnId -> groupId of the duck currently occupying that spawn point.
-    private final Map<String, UUID> activeBySpawnId = new LinkedHashMap<>();
+    // spawnId -> group UUIDs of the ducks currently alive at that point.
+    private final Map<String, Set<UUID>> activeBySpawnId = new LinkedHashMap<>();
 
     public DuckSpawner(DuckHuntPlugin plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfigManager();
     }
 
-    public boolean isOccupied(String spawnId) {
-        return activeBySpawnId.containsKey(spawnId);
+    public int getActiveCount(String spawnId) {
+        Set<UUID> active = activeBySpawnId.get(spawnId);
+        return active == null ? 0 : active.size();
+    }
+
+    public boolean isFull(SpawnPoint point) {
+        return getActiveCount(point.id()) >= point.effectiveAmount(config.getDefaultDuckAmount());
     }
 
     /**
-     * Rebuilds the "occupied spawn points" tracking from ducks already
-     * present in the world. Needed on startup, since ducks spawned in a
-     * previous server session (they're persistent) would otherwise be
-     * invisible to this session's in-memory tracking, causing duplicate
-     * spawns at the same point.
-     */
-    public void reconcileFromWorld() {
-        activeBySpawnId.clear();
-        for (World world : plugin.getServer().getWorlds()) {
-            for (Zombie zombie : world.getEntitiesByClass(Zombie.class)) {
-                if (!zombie.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
-                    continue;
-                }
-                PersistentDataContainer pdc = zombie.getPersistentDataContainer();
-                String spawnId = pdc.get(DuckKeys.spawn(), PersistentDataType.STRING);
-                String groupId = pdc.get(DuckKeys.group(), PersistentDataType.STRING);
-                if (spawnId != null && groupId != null) {
-                    activeBySpawnId.put(spawnId, UUID.fromString(groupId));
-                }
-            }
-        }
-    }
-
-    /**
-     * Spawns a duck at the given spawn point, unless it's already occupied
-     * or its world isn't loaded.
+     * Spawns a single duck at the given spawn point, unless it's already
+     * at capacity or its world isn't loaded.
      *
      * @return true if a duck was actually spawned.
      */
-    public boolean spawn(SpawnPoint point) {
-        if (isOccupied(point.id())) {
+    public boolean spawnOne(SpawnPoint point) {
+        if (isFull(point)) {
             return false;
         }
 
@@ -116,23 +101,37 @@ public class DuckSpawner {
         cart.addPassenger(stand);
         stand.addPassenger(zombie);
 
-        activeBySpawnId.put(point.id(), groupId);
+        activeBySpawnId.computeIfAbsent(point.id(), id -> new LinkedHashSet<>()).add(groupId);
         return true;
     }
 
     /**
-     * Spawns a duck on every configured, currently-empty spawn point.
+     * Tops a single spawn point up to its configured capacity.
      *
      * @return how many ducks were actually spawned.
      */
-    public int spawnAll() {
+    public int fill(SpawnPoint point) {
         int spawned = 0;
-        for (SpawnPoint point : config.getSpawnPoints().values()) {
-            if (spawn(point)) {
-                spawned++;
+        while (!isFull(point)) {
+            if (!spawnOne(point)) {
+                break; // e.g. world not loaded, no point retrying in a loop
             }
+            spawned++;
         }
         return spawned;
+    }
+
+    /**
+     * Tops up every configured spawn point to its capacity.
+     *
+     * @return how many ducks were actually spawned in total.
+     */
+    public int fillAll() {
+        int total = 0;
+        for (SpawnPoint point : plugin.getSpawnPointManager().getSpawnPoints().values()) {
+            total += fill(point);
+        }
+        return total;
     }
 
     private void applyDuckStats(Zombie zombie) {
@@ -144,6 +143,8 @@ public class DuckSpawner {
         zombie.setGlowing(config.isDuckGlowing());
         zombie.setCanPickupItems(false);
         zombie.setShouldBurnInDay(false);
+        // No loot table at all: the duck must never drop anything.
+        zombie.clearLootTable();
     }
 
     private void setAttribute(Zombie zombie, String key, double value) {
@@ -167,7 +168,8 @@ public class DuckSpawner {
 
     /**
      * Called when a duck (zombie) dies. Removes its armor stand and
-     * minecart, then frees its spawn point so it can respawn later.
+     * minecart, frees up its spawn point slot, and (if enabled) instantly
+     * spawns a replacement.
      */
     public void handleDeath(Zombie zombie) {
         boolean removedViaVehicle = false;
@@ -182,23 +184,37 @@ public class DuckSpawner {
             removedViaVehicle = true;
         }
 
-        String groupId = zombie.getPersistentDataContainer()
-                .get(DuckKeys.group(), PersistentDataType.STRING);
+        PersistentDataContainer pdc = zombie.getPersistentDataContainer();
+        String groupIdRaw = pdc.get(DuckKeys.group(), PersistentDataType.STRING);
 
-        if (!removedViaVehicle && groupId != null) {
+        if (!removedViaVehicle && groupIdRaw != null) {
             // Fallback: the passenger chain was already broken for some
-            // reason (another plugin, a weird edge case, etc). Clean up
-            // any leftover part sharing this duck's group id nearby.
+            // reason. Clean up any leftover part sharing this duck's
+            // group id nearby.
             zombie.getNearbyEntities(4, 4, 4).stream()
-                    .filter(nearby -> groupId.equals(nearby.getPersistentDataContainer()
+                    .filter(nearby -> groupIdRaw.equals(nearby.getPersistentDataContainer()
                             .get(DuckKeys.group(), PersistentDataType.STRING)))
                     .forEach(Entity::remove);
         }
 
-        String spawnId = zombie.getPersistentDataContainer()
-                .get(DuckKeys.spawn(), PersistentDataType.STRING);
-        if (spawnId != null) {
-            activeBySpawnId.remove(spawnId);
+        String spawnId = pdc.get(DuckKeys.spawn(), PersistentDataType.STRING);
+        if (spawnId == null) {
+            return;
+        }
+
+        Set<UUID> active = activeBySpawnId.get(spawnId);
+        if (active != null && groupIdRaw != null) {
+            active.remove(UUID.fromString(groupIdRaw));
+            if (active.isEmpty()) {
+                activeBySpawnId.remove(spawnId);
+            }
+        }
+
+        if (config.isInstantRespawn()) {
+            SpawnPoint point = plugin.getSpawnPointManager().get(spawnId);
+            if (point != null) {
+                spawnOne(point);
+            }
         }
     }
 
@@ -218,6 +234,31 @@ public class DuckSpawner {
             world.getEntitiesByClass(RideableMinecart.class).stream()
                     .filter(entity -> entity.getScoreboardTags().contains(DuckKeys.TAG_CART))
                     .forEach(Entity::remove);
+        }
+    }
+
+    /**
+     * Rebuilds the "active ducks per spawn point" tracking from ducks
+     * already present in the world. Needed on startup, since ducks
+     * spawned in a previous server session (they're persistent) would
+     * otherwise be invisible to this session's in-memory tracking,
+     * causing the plugin to spawn past the configured capacity.
+     */
+    public void reconcileFromWorld() {
+        activeBySpawnId.clear();
+        for (World world : plugin.getServer().getWorlds()) {
+            for (Zombie zombie : world.getEntitiesByClass(Zombie.class)) {
+                if (!zombie.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
+                    continue;
+                }
+                PersistentDataContainer pdc = zombie.getPersistentDataContainer();
+                String spawnId = pdc.get(DuckKeys.spawn(), PersistentDataType.STRING);
+                String groupId = pdc.get(DuckKeys.group(), PersistentDataType.STRING);
+                if (spawnId != null && groupId != null) {
+                    activeBySpawnId.computeIfAbsent(spawnId, id -> new LinkedHashSet<>())
+                            .add(UUID.fromString(groupId));
+                }
+            }
         }
     }
 }

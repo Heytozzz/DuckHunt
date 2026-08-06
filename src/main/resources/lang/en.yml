@@ -12,16 +12,17 @@ permission:
 
 spawnpoint:
   set: "<green>Spawn point <yellow><id></yellow> saved at your location.</green>"
+  amount-set: "<green>Spawn point <yellow><id></yellow> now keeps up to <yellow><amount></yellow> duck(s) alive at once.</green>"
   removed: "<green>Spawn point <yellow><id></yellow> removed.</green>"
   not-found: "<red>Spawn point <yellow><id></yellow> was not found.</red>"
   list-header: "<green>Configured spawn points:</green>"
-  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray>"
+  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount></gray>"
   list-empty: "<yellow>There are no spawn points configured yet. Use /duckhunt setspawn [id].</yellow>"
 
 spawn:
-  success: "<green>Duck spawned at <yellow><id></yellow>.</green>"
-  all-success: "<green>Spawned <yellow><count></yellow> duck(s).</green>"
-  occupied: "<yellow>Spawn point <yellow><id></yellow> is already occupied.</yellow>"
+  success: "<green>Spawned <yellow><count></yellow> duck(s) at <yellow><id></yellow>.</green>"
+  all-success: "<green>Spawned <yellow><count></yellow> duck(s) across all spawn points.</green>"
+  already-full: "<yellow>Spawn point <yellow><id></yellow> is already at full capacity.</yellow>"
 
 cleared: "<green>All ducks have been removed.</green>"
 
@@ -35,11 +36,13 @@ kill:
   broadcast: "<yellow><player></yellow> <green>caught a duck!</green>"
 
 usage:
-  main: "<yellow>Usage: /duckhunt [setspawn|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
-  setspawn: "<yellow>Usage: /duckhunt setspawn [id]</yellow>"
+  main: "<yellow>Usage: /duckhunt [setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload]</yellow>"
+  setspawn: "<yellow>Usage: /duckhunt setspawn [id] [amount]</yellow>"
+  setamount: "<yellow>Usage: /duckhunt setamount [id] [amount]</yellow>"
   removespawn: "<yellow>Usage: /duckhunt removespawn [id]</yellow>"
   spawn: "<yellow>Usage: /duckhunt spawn [id|all]</yellow>"
 
 error:
   players-only: "<red>This command can only be used by a player.</red>"
   unknown-subcommand: "<red>Unknown subcommand.</red>"
+  invalid-amount: "<red>Amount must be a whole number of 1 or higher.</red>"

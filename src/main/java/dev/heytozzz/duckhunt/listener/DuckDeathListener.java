@@ -22,7 +22,7 @@ public class DuckDeathListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onDuckDeath(EntityDeathEvent event) {
         if (!(event.getEntity() instanceof Zombie zombie)) {
             return;
@@ -34,6 +34,11 @@ public class DuckDeathListener implements Listener {
         // Grab the killer before the chain is torn down; getKiller() only
         // reflects recent player damage and is unaffected by the removal.
         Player killer = zombie.getKiller();
+
+        // Belt-and-suspenders: on top of clearLootTable() set at spawn
+        // time, make absolutely sure nothing drops or grants experience.
+        event.getDrops().clear();
+        event.setDroppedExp(0);
 
         plugin.getDuckSpawner().handleDeath(zombie);
 
