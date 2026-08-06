@@ -17,7 +17,7 @@ spawnpoint:
   not-found: "<red>No se encontró el punto de aparición <yellow><id></yellow>.</red>"
   list-header: "<green>Puntos de aparición configurados:</green>"
   list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount> <dark_gray>[<waypoints> waypoint(s)]</dark_gray></gray>"
-  list-empty: "<yellow>Todavía no hay puntos de aparición configurados. Usa /duckhunt spawner create [id].</yellow>"
+  list-empty: "<yellow>Todavía no hay puntos de aparición configurados. Usa /duckhunt admin spawner create [id].</yellow>"
 
 spawn:
   success: "<green>Se generaron <yellow><count></yellow> pato(s) en <yellow><id></yellow>.</green>"
@@ -39,6 +39,13 @@ top:
   header: "<green>Top cazadores de patos:</green>"
   entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><kills></yellow> pato(s)"
   empty: "<yellow>Todavía no hay kills en el leaderboard. Solo cuentan los patos eliminados desde la distancia mínima configurada.</yellow>"
+  reset: "<green>Se reinició el registro de <yellow><player></yellow> en el leaderboard.</green>"
+  reset-all: "<green>Se reinició todo el leaderboard.</green>"
+  reset-not-found: "<yellow><player> no tiene registro en el leaderboard para reiniciar.</yellow>"
+
+settings:
+  broadcast-global: "<green>Los avisos de kills ahora se envían a todos los jugadores conectados.</green>"
+  broadcast-radius: "<green>Los avisos de kills ahora solo llegan a jugadores a menos de <yellow><radius></yellow> bloque(s) de la eliminación.</green>"
 
 path:
   added: "<green>Waypoint añadido al camino de <yellow><id></yellow> (<yellow><count></yellow> en total).</green>"
@@ -48,16 +55,19 @@ path:
   mode-set: "<green>El modo de camino de <yellow><id></yellow> ahora es <yellow><mode></yellow>.</green>"
   list-header: "<green>Waypoints de <yellow><id></yellow>:</green>"
   list-entry: "<gray> - <yellow>#<index></yellow> <dark_gray>(<x>, <y>, <z>)</dark_gray>"
-  list-empty: "<yellow>El punto de aparición <yellow><id></yellow> todavía no tiene waypoints. Usa /duckhunt spawner <id> path add.</yellow>"
+  list-empty: "<yellow>El punto de aparición <yellow><id></yellow> todavía no tiene waypoints. Usa /duckhunt admin spawner <id> path add.</yellow>"
 
 usage:
-  main: "<yellow>Uso: /duckhunt [top|spawner|spawn|clear|start|stop|reload]</yellow>"
-  spawner: "<yellow>Uso: /duckhunt spawner [list|create|remove|id] ...</yellow>"
-  spawner-create: "<yellow>Uso: /duckhunt spawner create [id] [amount]</yellow>"
-  spawner-remove: "<yellow>Uso: /duckhunt spawner remove [id]</yellow>"
-  max: "<yellow>Uso: /duckhunt spawner [id] max [amount]</yellow>"
-  spawn: "<yellow>Uso: /duckhunt spawn [id|all]</yellow>"
-  path: "<yellow>Uso: /duckhunt spawner [id] path [add|list|remove|clear|mode] [índice|modo]</yellow>"
+  main: "<yellow>Uso: /duckhunt [top|admin]</yellow>"
+  admin: "<yellow>Uso: /duckhunt admin [spawner|spawn|clear|start|stop|reload|top|settings]</yellow>"
+  spawner: "<yellow>Uso: /duckhunt admin spawner [list|create|remove|id] ...</yellow>"
+  spawner-create: "<yellow>Uso: /duckhunt admin spawner create [id] [amount]</yellow>"
+  spawner-remove: "<yellow>Uso: /duckhunt admin spawner remove [id]</yellow>"
+  max: "<yellow>Uso: /duckhunt admin spawner [id] max [amount]</yellow>"
+  spawn: "<yellow>Uso: /duckhunt admin spawn [id|all]</yellow>"
+  path: "<yellow>Uso: /duckhunt admin spawner [id] path [add|list|remove|clear|mode] [índice|modo]</yellow>"
+  admin-top: "<yellow>Uso: /duckhunt admin top reset [jugador|all]</yellow>"
+  admin-settings: "<yellow>Uso: /duckhunt admin settings broadcast [global|radius <bloques>]</yellow>"
 
 error:
   players-only: "<red>Este comando solo puede usarse en el juego.</red>"

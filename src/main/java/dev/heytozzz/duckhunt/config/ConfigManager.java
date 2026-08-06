@@ -115,7 +115,7 @@ public class ConfigManager {
     /**
      * Whether a spawn point should instantly spawn a replacement duck the
      * moment one of its ducks dies, instead of waiting for the next
-     * auto-spawn cycle or a manual "/duckhunt spawn".
+     * auto-spawn cycle or a manual "/duckhunt admin spawn".
      */
     public boolean isInstantRespawn() {
         return instantRespawn;
@@ -181,5 +181,28 @@ public class ConfigManager {
      */
     public double getBroadcastRadius() {
         return broadcastRadius;
+    }
+
+    /**
+     * Switches the kill broadcast to "global" mode and persists it to
+     * config.yml. Used by "/duckhunt admin settings broadcast global".
+     */
+    public void setBroadcastGlobal() {
+        broadcastMode = BroadcastMode.GLOBAL;
+        plugin.getConfig().set("kill-broadcast.mode", "global");
+        plugin.saveConfig();
+    }
+
+    /**
+     * Switches the kill broadcast to "radius" mode with the given radius
+     * (in blocks) and persists both to config.yml. Used by
+     * "/duckhunt admin settings broadcast radius <blocks>".
+     */
+    public void setBroadcastRadius(double radius) {
+        broadcastMode = BroadcastMode.RADIUS;
+        broadcastRadius = radius;
+        plugin.getConfig().set("kill-broadcast.mode", "radius");
+        plugin.getConfig().set("kill-broadcast.radius", radius);
+        plugin.saveConfig();
     }
 }

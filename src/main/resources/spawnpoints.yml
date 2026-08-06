@@ -4,18 +4,19 @@
 # You normally don't need to edit this by hand:
 #
 # 1. Stand where you want a duck to appear and run
-#    "/duckhunt setspawn <id> [amount]" in-game. That command writes an
-#    entry here automatically.
+#    "/duckhunt admin spawner create <id> [amount]" in-game. That command
+#    writes an entry here automatically.
 # 2. Optionally, walk to each point you want the duck to patrol through
-#    (in order) and run "/duckhunt add path <id>" at each one to build
-#    its waypoint chain. If a point has no waypoints, its duck just
-#    stands still at the spawn location.
-# 3. Manage waypoints with "/duckhunt path list|remove|clear <id>" and
-#    the loop/pingpong/stop behaviour with "/duckhunt path mode <id> <mode>".
+#    (in order) and run "/duckhunt admin spawner <id> path add" at each
+#    one to build its waypoint chain. If a point has no waypoints, its
+#    duck just stands still at the spawn location.
+# 3. Manage waypoints with "/duckhunt admin spawner <id> path list|remove|clear"
+#    and the loop/pingpong/stop behaviour with
+#    "/duckhunt admin spawner <id> path mode <mode>".
 #
 # "amount" is optional per spawn point. Omit it (or use
-# "/duckhunt setamount <id> <amount>" to change it later) to fall back to
-# "spawn.default-amount" in config.yml.
+# "/duckhunt admin spawner <id> max <amount>" to change it later) to fall
+# back to "spawn.default-amount" in config.yml.
 #
 # "path-mode" is optional per spawn point. Omit it to fall back to
 # "spawn.default-path-mode" in config.yml.

@@ -14,7 +14,7 @@ import java.util.List;
  * @param amount   how many ducks this point should keep alive at once, or
  *                 {@code null} to fall back to the server-wide default
  *                 ({@code spawn.default-amount} in config.yml).
- * @param path     ordered waypoints (added via "/duckhunt add path <id>")
+ * @param path     ordered waypoints (added via "/duckhunt admin spawner <id> path add")
  *                 that every duck spawned here patrols, in addition to
  *                 this point's own location as the starting waypoint.
  * @param pathMode what a duck does after reaching the last waypoint, or

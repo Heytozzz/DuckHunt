@@ -29,15 +29,15 @@ duck:
 spawn:
   # Default number of ducks kept alive at once per spawn point. Individual
   # spawn points can override this in spawnpoints.yml (or via
-  # "/duckhunt setspawn <id> <amount>" / "/duckhunt setamount <id> <amount>").
+  # "/duckhunt admin spawner create <id> <amount>" / "/duckhunt admin spawner <id> max <amount>").
   default-amount: 1
   # If true, the instant a duck dies, a replacement duck spawns right away
   # at the same point instead of waiting for the next auto-spawn cycle or
-  # a manual "/duckhunt spawn".
+  # a manual "/duckhunt admin spawn".
   instant-respawn: false
   # What a duck does after reaching the last waypoint of its path.
   # Individual spawn points can override this in spawnpoints.yml (or via
-  # "/duckhunt path mode <id> <mode>").
+  # "/duckhunt admin spawner <id> path mode <mode>").
   #   loop     - goes back to the first waypoint (its spawn point) and starts over.
   #   pingpong - walks the path backwards until it reaches the start, then forwards again.
   #   stop     - stays put once it reaches the last waypoint.

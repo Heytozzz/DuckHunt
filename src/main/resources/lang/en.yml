@@ -17,7 +17,7 @@ spawnpoint:
   not-found: "<red>Spawn point <yellow><id></yellow> was not found.</red>"
   list-header: "<green>Configured spawn points:</green>"
   list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount> <dark_gray>[<waypoints> waypoint(s)]</dark_gray></gray>"
-  list-empty: "<yellow>There are no spawn points configured yet. Use /duckhunt spawner create [id].</yellow>"
+  list-empty: "<yellow>There are no spawn points configured yet. Use /duckhunt admin spawner create [id].</yellow>"
 
 spawn:
   success: "<green>Spawned <yellow><count></yellow> duck(s) at <yellow><id></yellow>.</green>"
@@ -39,6 +39,13 @@ top:
   header: "<green>Top duck hunters:</green>"
   entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><kills></yellow> kill(s)"
   empty: "<yellow>No leaderboard kills yet. Kills only count from at least the configured distance away.</yellow>"
+  reset: "<green>Reset <yellow><player></yellow>'s leaderboard entry.</green>"
+  reset-all: "<green>Reset the entire leaderboard.</green>"
+  reset-not-found: "<yellow><player> has no leaderboard entry to reset.</yellow>"
+
+settings:
+  broadcast-global: "<green>Kill broadcasts are now sent to every online player.</green>"
+  broadcast-radius: "<green>Kill broadcasts now only reach players within <yellow><radius></yellow> block(s) of the kill.</green>"
 
 path:
   added: "<green>Waypoint added to <yellow><id></yellow>'s path (<yellow><count></yellow> total).</green>"
@@ -48,16 +55,19 @@ path:
   mode-set: "<green>Spawn point <yellow><id></yellow>'s path mode is now <yellow><mode></yellow>.</green>"
   list-header: "<green>Waypoints for <yellow><id></yellow>:</green>"
   list-entry: "<gray> - <yellow>#<index></yellow> <dark_gray>(<x>, <y>, <z>)</dark_gray>"
-  list-empty: "<yellow>Spawn point <yellow><id></yellow> has no waypoints yet. Use /duckhunt spawner <id> path add.</yellow>"
+  list-empty: "<yellow>Spawn point <yellow><id></yellow> has no waypoints yet. Use /duckhunt admin spawner <id> path add.</yellow>"
 
 usage:
-  main: "<yellow>Usage: /duckhunt [top|spawner|spawn|clear|start|stop|reload]</yellow>"
-  spawner: "<yellow>Usage: /duckhunt spawner [list|create|remove|id] ...</yellow>"
-  spawner-create: "<yellow>Usage: /duckhunt spawner create [id] [amount]</yellow>"
-  spawner-remove: "<yellow>Usage: /duckhunt spawner remove [id]</yellow>"
-  max: "<yellow>Usage: /duckhunt spawner [id] max [amount]</yellow>"
-  spawn: "<yellow>Usage: /duckhunt spawn [id|all]</yellow>"
-  path: "<yellow>Usage: /duckhunt spawner [id] path [add|list|remove|clear|mode] [index|mode]</yellow>"
+  main: "<yellow>Usage: /duckhunt [top|admin]</yellow>"
+  admin: "<yellow>Usage: /duckhunt admin [spawner|spawn|clear|start|stop|reload|top|settings]</yellow>"
+  spawner: "<yellow>Usage: /duckhunt admin spawner [list|create|remove|id] ...</yellow>"
+  spawner-create: "<yellow>Usage: /duckhunt admin spawner create [id] [amount]</yellow>"
+  spawner-remove: "<yellow>Usage: /duckhunt admin spawner remove [id]</yellow>"
+  max: "<yellow>Usage: /duckhunt admin spawner [id] max [amount]</yellow>"
+  spawn: "<yellow>Usage: /duckhunt admin spawn [id|all]</yellow>"
+  path: "<yellow>Usage: /duckhunt admin spawner [id] path [add|list|remove|clear|mode] [index|mode]</yellow>"
+  admin-top: "<yellow>Usage: /duckhunt admin top reset [player|all]</yellow>"
+  admin-settings: "<yellow>Usage: /duckhunt admin settings broadcast [global|radius <blocks>]</yellow>"
 
 error:
   players-only: "<red>This command can only be used by a player.</red>"

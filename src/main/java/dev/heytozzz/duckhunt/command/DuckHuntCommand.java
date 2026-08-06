@@ -6,6 +6,7 @@ import dev.heytozzz.duckhunt.spawn.PathMode;
 import dev.heytozzz.duckhunt.spawn.SpawnPoint;
 import dev.heytozzz.duckhunt.spawn.Waypoint;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -23,18 +25,22 @@ import java.util.stream.Stream;
 
 /**
  * Handles "/duckhunt" and its subcommands. "/duckhunt top" only requires
- * "duckhunt.user" (default: true); every other subcommand requires
- * "duckhunt.admin", both declared in plugin.yml.
+ * "duckhunt.user" (default: true); everything under "/duckhunt admin"
+ * requires "duckhunt.admin", both declared in plugin.yml.
  */
 public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> SUBCOMMANDS = List.of(
-            "top", "spawner", "spawn", "clear", "start", "stop", "reload"
+    private static final List<String> SUBCOMMANDS = List.of("top", "admin");
+    private static final List<String> ADMIN_ACTIONS = List.of(
+            "spawner", "spawn", "clear", "start", "stop", "reload", "top", "settings"
     );
     private static final List<String> SPAWNER_ACTIONS = List.of("list", "create", "remove");
     private static final List<String> SPAWNER_ID_ACTIONS = List.of("max", "path");
     private static final List<String> PATH_ACTIONS = List.of("add", "list", "remove", "clear", "mode");
     private static final List<String> PATH_MODES = List.of("loop", "pingpong", "stop");
+    private static final List<String> TOP_ACTIONS = List.of("reset");
+    private static final List<String> SETTINGS_ACTIONS = List.of("broadcast");
+    private static final List<String> BROADCAST_MODES = List.of("global", "radius");
 
     private final DuckHuntPlugin plugin;
 
@@ -61,21 +67,105 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!sender.hasPermission("duckhunt.admin")) {
-            plugin.getLangManager().send(sender, "permission.denied");
+        if (sub.equals("admin")) {
+            if (!sender.hasPermission("duckhunt.admin")) {
+                plugin.getLangManager().send(sender, "permission.denied");
+                return true;
+            }
+            handleAdmin(sender, args);
             return true;
         }
 
-        switch (sub) {
-            case "spawner" -> handleSpawner(sender, args);
-            case "spawn" -> handleSpawn(sender, args);
+        plugin.getLangManager().send(sender, "error.unknown-subcommand");
+        return true;
+    }
+
+    /**
+     * Dispatches "/duckhunt admin ...". Rebases the array (dropping the
+     * leading "admin") so every handler below sees the exact same indices
+     * it would have if it were still directly under "/duckhunt" — nothing
+     * else in this class needed to change to make this move.
+     */
+    private void handleAdmin(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            plugin.getLangManager().send(sender, "usage.admin");
+            return;
+        }
+
+        String[] rest = Arrays.copyOfRange(args, 1, args.length);
+        String action = rest[0].toLowerCase(Locale.ROOT);
+        switch (action) {
+            case "spawner" -> handleSpawner(sender, rest);
+            case "spawn" -> handleSpawn(sender, rest);
             case "clear" -> handleClear(sender);
             case "start" -> handleStart(sender);
             case "stop" -> handleStop(sender);
             case "reload" -> handleReload(sender);
-            default -> plugin.getLangManager().send(sender, "error.unknown-subcommand");
+            case "top" -> handleAdminTop(sender, rest);
+            case "settings" -> handleAdminSettings(sender, rest);
+            default -> plugin.getLangManager().send(sender, "usage.admin");
         }
-        return true;
+    }
+
+    private void handleAdminTop(CommandSender sender, String[] args) {
+        if (args.length < 2 || !args[1].equalsIgnoreCase("reset")) {
+            plugin.getLangManager().send(sender, "usage.admin-top");
+            return;
+        }
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.admin-top");
+            return;
+        }
+
+        String target = args[2];
+        if (target.equalsIgnoreCase("all")) {
+            plugin.getLeaderboardManager().resetAll();
+            plugin.getLangManager().send(sender, "top.reset-all");
+            return;
+        }
+
+        Player online = plugin.getServer().getPlayerExact(target);
+        OfflinePlayer offlinePlayer = online != null ? online : plugin.getServer().getOfflinePlayer(target);
+        boolean removed = plugin.getLeaderboardManager().reset(offlinePlayer.getUniqueId());
+        if (removed) {
+            plugin.getLangManager().send(sender, "top.reset", Placeholder.unparsed("player", target));
+        } else {
+            plugin.getLangManager().send(sender, "top.reset-not-found", Placeholder.unparsed("player", target));
+        }
+    }
+
+    private void handleAdminSettings(CommandSender sender, String[] args) {
+        if (args.length < 2 || !args[1].equalsIgnoreCase("broadcast")) {
+            plugin.getLangManager().send(sender, "usage.admin-settings");
+            return;
+        }
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.admin-settings");
+            return;
+        }
+
+        String mode = args[2].toLowerCase(Locale.ROOT);
+        switch (mode) {
+            case "global" -> {
+                plugin.getConfigManager().setBroadcastGlobal();
+                plugin.getLangManager().send(sender, "settings.broadcast-global");
+            }
+            case "radius" -> {
+                if (args.length < 4) {
+                    plugin.getLangManager().send(sender, "usage.admin-settings");
+                    return;
+                }
+                Integer radius = parseAmount(args[3]);
+                if (radius == null) {
+                    plugin.getLangManager().send(sender, "error.invalid-amount");
+                    return;
+                }
+                plugin.getConfigManager().setBroadcastRadius(radius);
+                plugin.getLangManager().send(sender, "settings.broadcast-radius",
+                        Placeholder.unparsed("radius", String.valueOf(radius)));
+            }
+            default -> plugin.getLangManager().send(sender, "usage.admin-settings");
+        }
     }
 
     private void handleTop(CommandSender sender) {
@@ -97,7 +187,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Dispatches "/duckhunt spawner ...". Second argument is either a
+     * Dispatches "/duckhunt admin spawner ...". Second argument is either a
      * literal action ("list", "create", "remove") or the id of an existing
      * spawn point, in which case a third argument ("max"/"path") follows.
      */
@@ -154,8 +244,9 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             amount = parsed;
         }
 
-        // Re-running setspawn on an existing id only updates its location
-        // and amount override: its waypoint path and path-mode are kept.
+        // Re-running "spawner create" on an existing id only updates its
+        // location and amount override: its waypoint path and path-mode
+        // are kept.
         SpawnPoint existing = plugin.getSpawnPointManager().get(id);
         List<Waypoint> path = existing != null ? existing.path() : List.of();
         PathMode pathMode = existing != null ? existing.pathMode() : null;
@@ -434,9 +525,30 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         }
 
         String sub = args[0].toLowerCase(Locale.ROOT);
+        if (!sub.equals("admin")) {
+            return List.of(); // "top" takes no further arguments.
+        }
 
-        if (!sub.equals("spawner")) {
-            if (args.length == 2 && sub.equals("spawn")) {
+        return completeAdmin(Arrays.copyOfRange(args, 1, args.length));
+    }
+
+    /**
+     * Tab-completion for everything under "/duckhunt admin ...". Operates
+     * on a rebased array where index 0 is the action right after "admin",
+     * mirroring the indices the handlers above expect.
+     */
+    private List<String> completeAdmin(String[] args) {
+        if (args.length == 1) {
+            String partial = args[0].toLowerCase(Locale.ROOT);
+            return ADMIN_ACTIONS.stream()
+                    .filter(name -> name.startsWith(partial))
+                    .collect(Collectors.toList());
+        }
+
+        String action = args[0].toLowerCase(Locale.ROOT);
+
+        if (action.equals("spawn")) {
+            if (args.length == 2) {
                 String partial = args[1].toLowerCase(Locale.ROOT);
                 List<String> ids = new ArrayList<>(plugin.getSpawnPointManager().getSpawnPoints().keySet());
                 ids.add("all");
@@ -447,7 +559,48 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             return List.of();
         }
 
-        // Everything below handles "/duckhunt spawner ...".
+        if (action.equals("top")) {
+            if (args.length == 2) {
+                String partial = args[1].toLowerCase(Locale.ROOT);
+                return TOP_ACTIONS.stream()
+                        .filter(name -> name.startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 3 && args[1].equalsIgnoreCase("reset")) {
+                String partial = args[2].toLowerCase(Locale.ROOT);
+                List<String> names = new ArrayList<>();
+                names.add("all");
+                for (Player online : plugin.getServer().getOnlinePlayers()) {
+                    names.add(online.getName());
+                }
+                return names.stream()
+                        .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+            return List.of();
+        }
+
+        if (action.equals("settings")) {
+            if (args.length == 2) {
+                String partial = args[1].toLowerCase(Locale.ROOT);
+                return SETTINGS_ACTIONS.stream()
+                        .filter(name -> name.startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 3 && args[1].equalsIgnoreCase("broadcast")) {
+                String partial = args[2].toLowerCase(Locale.ROOT);
+                return BROADCAST_MODES.stream()
+                        .filter(name -> name.startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+            return List.of();
+        }
+
+        if (!action.equals("spawner")) {
+            return List.of(); // clear/start/stop/reload take no further arguments.
+        }
+
+        // Everything below handles "/duckhunt admin spawner ...".
         Set<String> spawnerIds = plugin.getSpawnPointManager().getSpawnPoints().keySet();
 
         if (args.length == 2) {
