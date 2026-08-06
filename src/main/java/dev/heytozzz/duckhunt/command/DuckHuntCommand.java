@@ -27,10 +27,11 @@ import java.util.stream.Stream;
 public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
-            "setspawn", "setamount", "removespawn", "list", "spawn", "clear",
-            "start", "stop", "reload", "add", "path"
+            "spawner", "spawn", "clear", "start", "stop", "reload"
     );
-    private static final List<String> PATH_ACTIONS = List.of("list", "remove", "clear", "mode");
+    private static final List<String> SPAWNER_ACTIONS = List.of("list", "create", "remove");
+    private static final List<String> SPAWNER_ID_ACTIONS = List.of("max", "path");
+    private static final List<String> PATH_ACTIONS = List.of("add", "list", "remove", "clear", "mode");
     private static final List<String> PATH_MODES = List.of("loop", "pingpong", "stop");
 
     private final DuckHuntPlugin plugin;
@@ -49,38 +50,68 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
-            case "setspawn" -> handleSetSpawn(sender, args);
-            case "setamount" -> handleSetAmount(sender, args);
-            case "removespawn" -> handleRemoveSpawn(sender, args);
-            case "list" -> handleList(sender);
+            case "spawner" -> handleSpawner(sender, args);
             case "spawn" -> handleSpawn(sender, args);
             case "clear" -> handleClear(sender);
             case "start" -> handleStart(sender);
             case "stop" -> handleStop(sender);
             case "reload" -> handleReload(sender);
-            case "add" -> handleAdd(sender, args);
-            case "path" -> handlePath(sender, args);
             default -> plugin.getLangManager().send(sender, "error.unknown-subcommand");
         }
         return true;
     }
 
-    private void handleSetSpawn(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            plugin.getLangManager().send(sender, "error.players-only");
+    /**
+     * Dispatches "/duckhunt spawner ...". Second argument is either a
+     * literal action ("list", "create", "remove") or the id of an existing
+     * spawn point, in which case a third argument ("max"/"path") follows.
+     */
+    private void handleSpawner(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            plugin.getLangManager().send(sender, "usage.spawner");
             return;
         }
-        if (args.length < 2) {
-            plugin.getLangManager().send(sender, "usage.setspawn");
+
+        String action = args[1].toLowerCase(Locale.ROOT);
+        switch (action) {
+            case "list" -> handleList(sender);
+            case "create" -> handleSpawnerCreate(sender, args);
+            case "remove" -> handleSpawnerRemove(sender, args);
+            default -> handleSpawnerId(sender, args);
+        }
+    }
+
+    private void handleSpawnerId(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.spawner");
             return;
         }
 
         String id = args[1];
+        String action = args[2].toLowerCase(Locale.ROOT);
+        switch (action) {
+            case "max" -> handleMax(sender, id, args);
+            case "path" -> handlePath(sender, id, args);
+            default -> plugin.getLangManager().send(sender, "usage.spawner");
+        }
+    }
 
-        // Optional 3rd argument: per-spawn-point duck amount override.
+    private void handleSpawnerCreate(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            plugin.getLangManager().send(sender, "error.players-only");
+            return;
+        }
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.spawner-create");
+            return;
+        }
+
+        String id = args[2];
+
+        // Optional 4th argument: per-spawn-point duck amount override.
         Integer amount = null;
-        if (args.length >= 3) {
-            Integer parsed = parseAmount(args[2]);
+        if (args.length >= 4) {
+            Integer parsed = parseAmount(args[3]);
             if (parsed == null) {
                 plugin.getLangManager().send(sender, "error.invalid-amount");
                 return;
@@ -109,20 +140,19 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         plugin.getLangManager().send(sender, "spawnpoint.set", Placeholder.unparsed("id", id));
     }
 
-    private void handleSetAmount(CommandSender sender, String[] args) {
-        if (args.length < 3) {
-            plugin.getLangManager().send(sender, "usage.setamount");
+    private void handleMax(CommandSender sender, String id, String[] args) {
+        if (args.length < 4) {
+            plugin.getLangManager().send(sender, "usage.max");
             return;
         }
 
-        String id = args[1];
         SpawnPoint existing = plugin.getSpawnPointManager().get(id);
         if (existing == null) {
             plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", id));
             return;
         }
 
-        Integer amount = parseAmount(args[2]);
+        Integer amount = parseAmount(args[3]);
         if (amount == null) {
             plugin.getLangManager().send(sender, "error.invalid-amount");
             return;
@@ -138,13 +168,13 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
                 Placeholder.unparsed("amount", String.valueOf(amount)));
     }
 
-    private void handleRemoveSpawn(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            plugin.getLangManager().send(sender, "usage.removespawn");
+    private void handleSpawnerRemove(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.spawner-remove");
             return;
         }
 
-        String id = args[1];
+        String id = args[2];
         if (plugin.getSpawnPointManager().remove(id)) {
             plugin.getLangManager().send(sender, "spawnpoint.removed", Placeholder.unparsed("id", id));
         } else {
@@ -241,24 +271,32 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         plugin.getLangManager().send(sender, "reload.success");
     }
 
-    private void handleAdd(CommandSender sender, String[] args) {
-        if (args.length < 2 || !args[1].equalsIgnoreCase("path")) {
-            plugin.getLangManager().send(sender, "usage.addpath");
-            return;
-        }
-        if (!(sender instanceof Player player)) {
-            plugin.getLangManager().send(sender, "error.players-only");
-            return;
-        }
-        if (args.length < 3) {
-            plugin.getLangManager().send(sender, "usage.addpath");
+    private void handlePath(CommandSender sender, String id, String[] args) {
+        if (args.length < 4) {
+            plugin.getLangManager().send(sender, "usage.path");
             return;
         }
 
-        String id = args[2];
+        String action = args[3].toLowerCase(Locale.ROOT);
         SpawnPoint point = plugin.getSpawnPointManager().get(id);
         if (point == null) {
             plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", id));
+            return;
+        }
+
+        switch (action) {
+            case "add" -> handlePathAdd(sender, id);
+            case "list" -> handlePathList(sender, point);
+            case "clear" -> handlePathClear(sender, id);
+            case "remove" -> handlePathRemove(sender, id, args);
+            case "mode" -> handlePathMode(sender, id, args);
+            default -> plugin.getLangManager().send(sender, "usage.path");
+        }
+    }
+
+    private void handlePathAdd(CommandSender sender, String id) {
+        if (!(sender instanceof Player player)) {
+            plugin.getLangManager().send(sender, "error.players-only");
             return;
         }
 
@@ -267,29 +305,6 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         plugin.getLangManager().send(sender, "path.added",
                 Placeholder.unparsed("id", id),
                 Placeholder.unparsed("count", String.valueOf(count)));
-    }
-
-    private void handlePath(CommandSender sender, String[] args) {
-        if (args.length < 3) {
-            plugin.getLangManager().send(sender, "usage.path");
-            return;
-        }
-
-        String action = args[1].toLowerCase(Locale.ROOT);
-        String id = args[2];
-        SpawnPoint point = plugin.getSpawnPointManager().get(id);
-        if (point == null) {
-            plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", id));
-            return;
-        }
-
-        switch (action) {
-            case "list" -> handlePathList(sender, point);
-            case "clear" -> handlePathClear(sender, id);
-            case "remove" -> handlePathRemove(sender, args, id);
-            case "mode" -> handlePathMode(sender, args, id);
-            default -> plugin.getLangManager().send(sender, "usage.path");
-        }
     }
 
     private void handlePathList(CommandSender sender, SpawnPoint point) {
@@ -315,13 +330,13 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         plugin.getLangManager().send(sender, "path.cleared", Placeholder.unparsed("id", id));
     }
 
-    private void handlePathRemove(CommandSender sender, String[] args, String id) {
-        if (args.length < 4) {
+    private void handlePathRemove(CommandSender sender, String id, String[] args) {
+        if (args.length < 5) {
             plugin.getLangManager().send(sender, "usage.path");
             return;
         }
 
-        Integer index = parseAmount(args[3]);
+        Integer index = parseAmount(args[4]);
         if (index == null) {
             plugin.getLangManager().send(sender, "error.invalid-amount");
             return;
@@ -339,13 +354,13 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void handlePathMode(CommandSender sender, String[] args, String id) {
-        if (args.length < 4) {
+    private void handlePathMode(CommandSender sender, String id, String[] args) {
+        if (args.length < 5) {
             plugin.getLangManager().send(sender, "usage.path");
             return;
         }
 
-        PathMode mode = PathMode.parse(args[3]);
+        PathMode mode = PathMode.parse(args[4]);
         if (mode == null) {
             plugin.getLangManager().send(sender, "error.invalid-path-mode");
             return;
@@ -384,24 +399,11 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase(Locale.ROOT);
 
-        if (args.length == 2) {
-            String partial = args[1].toLowerCase(Locale.ROOT);
-
-            if (sub.equals("add")) {
-                return Stream.of("path")
-                        .filter(name -> name.startsWith(partial))
-                        .collect(Collectors.toList());
-            }
-            if (sub.equals("path")) {
-                return PATH_ACTIONS.stream()
-                        .filter(name -> name.startsWith(partial))
-                        .collect(Collectors.toList());
-            }
-            if (sub.equals("removespawn") || sub.equals("setamount") || sub.equals("spawn")) {
+        if (!sub.equals("spawner")) {
+            if (args.length == 2 && sub.equals("spawn")) {
+                String partial = args[1].toLowerCase(Locale.ROOT);
                 List<String> ids = new ArrayList<>(plugin.getSpawnPointManager().getSpawnPoints().keySet());
-                if (sub.equals("spawn")) {
-                    ids.add("all");
-                }
+                ids.add("all");
                 return ids.stream()
                         .filter(id -> id.toLowerCase(Locale.ROOT).startsWith(partial))
                         .collect(Collectors.toList());
@@ -409,21 +411,46 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             return List.of();
         }
 
+        // Everything below handles "/duckhunt spawner ...".
+        Set<String> spawnerIds = plugin.getSpawnPointManager().getSpawnPoints().keySet();
+
+        if (args.length == 2) {
+            String partial = args[1].toLowerCase(Locale.ROOT);
+            return Stream.concat(SPAWNER_ACTIONS.stream(), spawnerIds.stream())
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(partial))
+                    .collect(Collectors.toList());
+        }
+
+        String spawnerAction = args[1].toLowerCase(Locale.ROOT);
+
         if (args.length == 3) {
             String partial = args[2].toLowerCase(Locale.ROOT);
-            boolean addPath = sub.equals("add") && args[1].equalsIgnoreCase("path");
-            boolean pathAction = sub.equals("path")
-                    && Set.copyOf(PATH_ACTIONS).contains(args[1].toLowerCase(Locale.ROOT));
-            if (addPath || pathAction) {
-                return plugin.getSpawnPointManager().getSpawnPoints().keySet().stream()
+            if (spawnerAction.equals("remove")) {
+                return spawnerIds.stream()
                         .filter(id -> id.toLowerCase(Locale.ROOT).startsWith(partial))
                         .collect(Collectors.toList());
             }
-            return List.of();
+            if (spawnerAction.equals("create")) {
+                return List.of();
+            }
+            // args[1] is treated as an existing spawn point id.
+            return SPAWNER_ID_ACTIONS.stream()
+                    .filter(name -> name.startsWith(partial))
+                    .collect(Collectors.toList());
         }
 
-        if (args.length == 4 && sub.equals("path") && args[1].equalsIgnoreCase("mode")) {
+        boolean isIdContext = !SPAWNER_ACTIONS.contains(spawnerAction);
+
+        if (args.length == 4 && isIdContext && args[2].equalsIgnoreCase("path")) {
             String partial = args[3].toLowerCase(Locale.ROOT);
+            return PATH_ACTIONS.stream()
+                    .filter(name -> name.startsWith(partial))
+                    .collect(Collectors.toList());
+        }
+
+        if (args.length == 5 && isIdContext && args[2].equalsIgnoreCase("path")
+                && args[3].equalsIgnoreCase("mode")) {
+            String partial = args[4].toLowerCase(Locale.ROOT);
             return PATH_MODES.stream()
                     .filter(name -> name.startsWith(partial))
                     .collect(Collectors.toList());

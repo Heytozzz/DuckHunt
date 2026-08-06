@@ -12,7 +12,7 @@ load: POSTWORLD
 commands:
   duckhunt:
     description: Manage the DuckHunt minigame.
-    usage: '/<command> <setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload|add|path>'
+    usage: '/<command> <spawner|spawn|clear|start|stop|reload>'
     permission: duckhunt.admin
     aliases: [dh]
 

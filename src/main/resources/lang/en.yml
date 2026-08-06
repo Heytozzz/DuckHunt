@@ -17,7 +17,7 @@ spawnpoint:
   not-found: "<red>Spawn point <yellow><id></yellow> was not found.</red>"
   list-header: "<green>Configured spawn points:</green>"
   list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<world>: <x>, <y>, <z>)</dark_gray> <gray><active>/<amount> <dark_gray>[<waypoints> waypoint(s)]</dark_gray></gray>"
-  list-empty: "<yellow>There are no spawn points configured yet. Use /duckhunt setspawn [id].</yellow>"
+  list-empty: "<yellow>There are no spawn points configured yet. Use /duckhunt spawner create [id].</yellow>"
 
 spawn:
   success: "<green>Spawned <yellow><count></yellow> duck(s) at <yellow><id></yellow>.</green>"
@@ -43,16 +43,16 @@ path:
   mode-set: "<green>Spawn point <yellow><id></yellow>'s path mode is now <yellow><mode></yellow>.</green>"
   list-header: "<green>Waypoints for <yellow><id></yellow>:</green>"
   list-entry: "<gray> - <yellow>#<index></yellow> <dark_gray>(<x>, <y>, <z>)</dark_gray>"
-  list-empty: "<yellow>Spawn point <yellow><id></yellow> has no waypoints yet. Use /duckhunt add path <id>.</yellow>"
+  list-empty: "<yellow>Spawn point <yellow><id></yellow> has no waypoints yet. Use /duckhunt spawner <id> path add.</yellow>"
 
 usage:
-  main: "<yellow>Usage: /duckhunt [setspawn|setamount|removespawn|list|spawn|clear|start|stop|reload|add|path]</yellow>"
-  setspawn: "<yellow>Usage: /duckhunt setspawn [id] [amount]</yellow>"
-  setamount: "<yellow>Usage: /duckhunt setamount [id] [amount]</yellow>"
-  removespawn: "<yellow>Usage: /duckhunt removespawn [id]</yellow>"
+  main: "<yellow>Usage: /duckhunt [spawner|spawn|clear|start|stop|reload]</yellow>"
+  spawner: "<yellow>Usage: /duckhunt spawner [list|create|remove|id] ...</yellow>"
+  spawner-create: "<yellow>Usage: /duckhunt spawner create [id] [amount]</yellow>"
+  spawner-remove: "<yellow>Usage: /duckhunt spawner remove [id]</yellow>"
+  max: "<yellow>Usage: /duckhunt spawner [id] max [amount]</yellow>"
   spawn: "<yellow>Usage: /duckhunt spawn [id|all]</yellow>"
-  addpath: "<yellow>Usage: /duckhunt add path [id]</yellow>"
-  path: "<yellow>Usage: /duckhunt path [list|remove|clear|mode] [id] [index|mode]</yellow>"
+  path: "<yellow>Usage: /duckhunt spawner [id] path [add|list|remove|clear|mode] [index|mode]</yellow>"
 
 error:
   players-only: "<red>This command can only be used by a player.</red>"
