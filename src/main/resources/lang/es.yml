@@ -35,6 +35,11 @@ auto:
 kill:
   broadcast: "<yellow><player></yellow> <green>¡cazó un pato!</green>"
 
+top:
+  header: "<green>Top cazadores de patos:</green>"
+  entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><kills></yellow> pato(s)"
+  empty: "<yellow>Todavía no hay kills en el leaderboard. Solo cuentan los patos eliminados desde la distancia mínima configurada.</yellow>"
+
 path:
   added: "<green>Waypoint añadido al camino de <yellow><id></yellow> (<yellow><count></yellow> en total).</green>"
   removed: "<green>Waypoint <yellow><index></yellow> eliminado del camino de <yellow><id></yellow>.</green>"
@@ -46,7 +51,7 @@ path:
   list-empty: "<yellow>El punto de aparición <yellow><id></yellow> todavía no tiene waypoints. Usa /duckhunt spawner <id> path add.</yellow>"
 
 usage:
-  main: "<yellow>Uso: /duckhunt [spawner|spawn|clear|start|stop|reload]</yellow>"
+  main: "<yellow>Uso: /duckhunt [top|spawner|spawn|clear|start|stop|reload]</yellow>"
   spawner: "<yellow>Uso: /duckhunt spawner [list|create|remove|id] ...</yellow>"
   spawner-create: "<yellow>Uso: /duckhunt spawner create [id] [amount]</yellow>"
   spawner-remove: "<yellow>Uso: /duckhunt spawner remove [id]</yellow>"

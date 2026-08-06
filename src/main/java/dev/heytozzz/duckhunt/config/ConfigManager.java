@@ -27,7 +27,12 @@ public class ConfigManager {
     private boolean autoSpawnEnabled;
     private int autoSpawnIntervalSeconds;
 
-    private boolean broadcastKill;
+    private double minKillDistance;
+    private int leaderboardTopSize;
+
+    private boolean broadcastEnabled;
+    private BroadcastMode broadcastMode;
+    private double broadcastRadius;
 
     public ConfigManager(DuckHuntPlugin plugin) {
         this.plugin = plugin;
@@ -60,7 +65,16 @@ public class ConfigManager {
         autoSpawnEnabled = config.getBoolean("auto-spawn.enabled", false);
         autoSpawnIntervalSeconds = config.getInt("auto-spawn.interval-seconds", 20);
 
-        broadcastKill = config.getBoolean("broadcast-kill", true);
+        minKillDistance = Math.max(0.0, config.getDouble("leaderboard.min-kill-distance", 10.0));
+        leaderboardTopSize = Math.max(1, config.getInt("leaderboard.top-size", 10));
+
+        broadcastEnabled = config.getBoolean("kill-broadcast.enabled", true);
+        broadcastMode = BroadcastMode.parse(config.getString("kill-broadcast.mode", "global"));
+        if (broadcastMode == null) {
+            plugin.getLogger().warning("Invalid 'kill-broadcast.mode' in config.yml, falling back to 'global'.");
+            broadcastMode = BroadcastMode.GLOBAL;
+        }
+        broadcastRadius = Math.max(0.0, config.getDouble("kill-broadcast.radius", 100.0));
     }
 
     public double getDuckHealth() {
@@ -132,7 +146,40 @@ public class ConfigManager {
         return autoSpawnIntervalSeconds;
     }
 
-    public boolean isBroadcastKill() {
-        return broadcastKill;
+    /**
+     * Minimum distance (in blocks) between the killer and the duck at the
+     * moment of death for the kill to count towards the leaderboard.
+     */
+    public double getMinKillDistance() {
+        return minKillDistance;
+    }
+
+    /**
+     * How many entries "/duckhunt top" shows.
+     */
+    public int getLeaderboardTopSize() {
+        return leaderboardTopSize;
+    }
+
+    public boolean isBroadcastEnabled() {
+        return broadcastEnabled;
+    }
+
+    /**
+     * Whether the kill broadcast is sent to every online player
+     * ({@link BroadcastMode#GLOBAL}) or only to those within
+     * {@link #getBroadcastRadius()} blocks of the kill
+     * ({@link BroadcastMode#RADIUS}).
+     */
+    public BroadcastMode getBroadcastMode() {
+        return broadcastMode;
+    }
+
+    /**
+     * Radius (in blocks) used when {@link #getBroadcastMode()} is
+     * {@link BroadcastMode#RADIUS}.
+     */
+    public double getBroadcastRadius() {
+        return broadcastRadius;
     }
 }

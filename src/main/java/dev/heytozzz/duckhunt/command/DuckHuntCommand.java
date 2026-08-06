@@ -1,6 +1,7 @@
 package dev.heytozzz.duckhunt.command;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.leaderboard.LeaderboardEntry;
 import dev.heytozzz.duckhunt.spawn.PathMode;
 import dev.heytozzz.duckhunt.spawn.SpawnPoint;
 import dev.heytozzz.duckhunt.spawn.Waypoint;
@@ -21,13 +22,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Handles "/duckhunt" and its subcommands. The whole command is gated by
- * the "duckhunt.admin" permission declared in plugin.yml.
+ * Handles "/duckhunt" and its subcommands. "/duckhunt top" only requires
+ * "duckhunt.user" (default: true); every other subcommand requires
+ * "duckhunt.admin", both declared in plugin.yml.
  */
 public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
-            "spawner", "spawn", "clear", "start", "stop", "reload"
+            "top", "spawner", "spawn", "clear", "start", "stop", "reload"
     );
     private static final List<String> SPAWNER_ACTIONS = List.of("list", "create", "remove");
     private static final List<String> SPAWNER_ID_ACTIONS = List.of("max", "path");
@@ -49,6 +51,21 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         }
 
         String sub = args[0].toLowerCase(Locale.ROOT);
+
+        if (sub.equals("top")) {
+            if (!sender.hasPermission("duckhunt.user")) {
+                plugin.getLangManager().send(sender, "permission.denied");
+                return true;
+            }
+            handleTop(sender);
+            return true;
+        }
+
+        if (!sender.hasPermission("duckhunt.admin")) {
+            plugin.getLangManager().send(sender, "permission.denied");
+            return true;
+        }
+
         switch (sub) {
             case "spawner" -> handleSpawner(sender, args);
             case "spawn" -> handleSpawn(sender, args);
@@ -59,6 +76,24 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             default -> plugin.getLangManager().send(sender, "error.unknown-subcommand");
         }
         return true;
+    }
+
+    private void handleTop(CommandSender sender) {
+        int limit = plugin.getConfigManager().getLeaderboardTopSize();
+        List<LeaderboardEntry> top = plugin.getLeaderboardManager().getTop(limit);
+        if (top.isEmpty()) {
+            plugin.getLangManager().send(sender, "top.empty");
+            return;
+        }
+
+        plugin.getLangManager().send(sender, "top.header");
+        for (int i = 0; i < top.size(); i++) {
+            LeaderboardEntry entry = top.get(i);
+            plugin.getLangManager().send(sender, "top.entry",
+                    Placeholder.unparsed("rank", String.valueOf(i + 1)),
+                    Placeholder.unparsed("player", entry.name()),
+                    Placeholder.unparsed("kills", String.valueOf(entry.kills())));
+        }
     }
 
     /**
@@ -264,6 +299,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         plugin.getConfigManager().load();
         plugin.getSpawnPointManager().load();
         plugin.getLangManager().load();
+        plugin.getLeaderboardManager().load();
         // Restart the path-following task so a changed
         // "spawn.path-check-interval-ticks" takes effect immediately.
         plugin.getDuckSpawner().stopPathFollowing();

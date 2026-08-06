@@ -12,11 +12,13 @@ load: POSTWORLD
 commands:
   duckhunt:
     description: Manage the DuckHunt minigame.
-    usage: '/<command> <spawner|spawn|clear|start|stop|reload>'
-    permission: duckhunt.admin
+    usage: '/<command> <top|spawner|spawn|clear|start|stop|reload>'
     aliases: [dh]
 
 permissions:
   duckhunt.admin:
     description: Allows management of the DuckHunt minigame.
     default: op
+  duckhunt.user:
+    description: Allows viewing the DuckHunt kill leaderboard.
+    default: true

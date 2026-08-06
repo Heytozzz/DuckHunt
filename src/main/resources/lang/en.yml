@@ -35,6 +35,11 @@ auto:
 kill:
   broadcast: "<yellow><player></yellow> <green>caught a duck!</green>"
 
+top:
+  header: "<green>Top duck hunters:</green>"
+  entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><kills></yellow> kill(s)"
+  empty: "<yellow>No leaderboard kills yet. Kills only count from at least the configured distance away.</yellow>"
+
 path:
   added: "<green>Waypoint added to <yellow><id></yellow>'s path (<yellow><count></yellow> total).</green>"
   removed: "<green>Waypoint <yellow><index></yellow> removed from <yellow><id></yellow>'s path.</green>"
@@ -46,7 +51,7 @@ path:
   list-empty: "<yellow>Spawn point <yellow><id></yellow> has no waypoints yet. Use /duckhunt spawner <id> path add.</yellow>"
 
 usage:
-  main: "<yellow>Usage: /duckhunt [spawner|spawn|clear|start|stop|reload]</yellow>"
+  main: "<yellow>Usage: /duckhunt [top|spawner|spawn|clear|start|stop|reload]</yellow>"
   spawner: "<yellow>Usage: /duckhunt spawner [list|create|remove|id] ...</yellow>"
   spawner-create: "<yellow>Usage: /duckhunt spawner create [id] [amount]</yellow>"
   spawner-remove: "<yellow>Usage: /duckhunt spawner remove [id]</yellow>"

@@ -4,6 +4,7 @@ import dev.heytozzz.duckhunt.command.DuckHuntCommand;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.config.SpawnPointManager;
 import dev.heytozzz.duckhunt.lang.LangManager;
+import dev.heytozzz.duckhunt.leaderboard.LeaderboardManager;
 import dev.heytozzz.duckhunt.listener.DuckDeathListener;
 import dev.heytozzz.duckhunt.spawn.AutoSpawnManager;
 import dev.heytozzz.duckhunt.spawn.DuckKeys;
@@ -18,6 +19,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
     private LangManager langManager;
     private DuckSpawner duckSpawner;
     private AutoSpawnManager autoSpawnManager;
+    private LeaderboardManager leaderboardManager;
 
     @Override
     public void onEnable() {
@@ -31,6 +33,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
         this.langManager = new LangManager(this);
         this.langManager.load();
+
+        this.leaderboardManager = new LeaderboardManager(this);
+        this.leaderboardManager.load();
 
         this.duckSpawner = new DuckSpawner(this);
         this.duckSpawner.reconcileFromWorld();
@@ -84,5 +89,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
     public AutoSpawnManager getAutoSpawnManager() {
         return autoSpawnManager;
+    }
+
+    public LeaderboardManager getLeaderboardManager() {
+        return leaderboardManager;
     }
 }

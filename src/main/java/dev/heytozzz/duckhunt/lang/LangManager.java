@@ -4,6 +4,7 @@ import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -121,6 +122,26 @@ public class LangManager {
      */
     public void broadcast(String key, TagResolver... placeholders) {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
+            player.sendMessage(render(player, key, placeholders));
+        }
+        CommandSender console = plugin.getServer().getConsoleSender();
+        console.sendMessage(render(console, key, placeholders));
+    }
+
+    /**
+     * Renders and sends a translated message to every online player within
+     * {@code radius} blocks of {@code origin} (same world only), plus the
+     * console. Used for the "radius" kill-broadcast mode.
+     */
+    public void broadcastNear(Location origin, double radius, String key, TagResolver... placeholders) {
+        double radiusSquared = radius * radius;
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            if (!player.getWorld().equals(origin.getWorld())) {
+                continue;
+            }
+            if (player.getLocation().distanceSquared(origin) > radiusSquared) {
+                continue;
+            }
             player.sendMessage(render(player, key, placeholders));
         }
         CommandSender console = plugin.getServer().getConsoleSender();

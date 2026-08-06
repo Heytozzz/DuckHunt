@@ -53,5 +53,20 @@ auto-spawn:
   enabled: false
   interval-seconds: 20
 
-# Broadcasts a message to the whole server whenever a duck is killed.
-broadcast-kill: true
+# Duck kill leaderboard ("/duckhunt top").
+leaderboard:
+  # Minimum distance (in blocks) between the killer and the duck at the
+  # moment of death for the kill to count towards the leaderboard. Meant
+  # to reward ranged/skillful kills over standing next to the duck.
+  min-kill-distance: 10.0
+  # How many entries "/duckhunt top" shows.
+  top-size: 10
+
+# Broadcasts a message whenever a duck is killed (independent from
+# whether that kill counted towards the leaderboard above).
+kill-broadcast:
+  enabled: true
+  # global - sent to every online player.
+  # radius - only sent to players within "radius" blocks of the kill.
+  mode: global
+  radius: 100.0
