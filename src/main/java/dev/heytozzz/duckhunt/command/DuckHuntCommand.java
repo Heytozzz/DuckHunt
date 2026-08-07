@@ -246,8 +246,8 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         }
 
         // Re-running "spawner create" on an existing id only updates its
-        // location and amount override: its waypoint path and path-mode
-        // are kept.
+        // location and amount override: its waypoint path, path-mode and
+        // effect overrides are kept.
         SpawnPoint existing = plugin.getSpawnPointManager().get(id);
         List<Waypoint> path = existing != null ? existing.path() : List.of();
         PathMode pathMode = existing != null ? existing.pathMode() : null;
@@ -261,7 +261,9 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
                 player.getLocation().getYaw(),
                 amount,
                 path,
-                pathMode
+                pathMode,
+                existing != null ? existing.spawnEffects() : null,
+                existing != null ? existing.deathEffects() : null
         );
         plugin.getSpawnPointManager().save(point);
         plugin.getLangManager().send(sender, "spawnpoint.set", Placeholder.unparsed("id", id));
@@ -287,7 +289,8 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
         SpawnPoint updated = new SpawnPoint(
                 existing.id(), existing.worldName(), existing.x(), existing.y(), existing.z(),
-                existing.yaw(), amount, existing.path(), existing.pathMode()
+                existing.yaw(), amount, existing.path(), existing.pathMode(), existing.spawnEffects(),
+                existing.deathEffects()
         );
         plugin.getSpawnPointManager().save(updated);
         plugin.getLangManager().send(sender, "spawnpoint.amount-set",

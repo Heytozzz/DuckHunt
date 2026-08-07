@@ -1,6 +1,8 @@
 package dev.heytozzz.duckhunt.config;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.effect.EffectConfig;
+import dev.heytozzz.duckhunt.effect.EffectSet;
 import dev.heytozzz.duckhunt.spawn.PathMode;
 import dev.heytozzz.duckhunt.spawn.SpawnPoint;
 import dev.heytozzz.duckhunt.spawn.Waypoint;
@@ -54,6 +56,10 @@ public class SpawnPointManager {
                 }
                 Integer amount = point.contains("amount") ? point.getInt("amount") : null;
                 PathMode pathMode = PathMode.parse(point.getString("path-mode"));
+                EffectSet spawnEffects = EffectConfig.parse(
+                        point.getConfigurationSection("effects.spawn"), plugin.getLogger());
+                EffectSet deathEffects = EffectConfig.parse(
+                        point.getConfigurationSection("effects.death"), plugin.getLogger());
                 spawnPoints.put(id, new SpawnPoint(
                         id,
                         point.getString("world", "world"),
@@ -63,7 +69,9 @@ public class SpawnPointManager {
                         (float) point.getDouble("yaw", 0.0),
                         amount,
                         readPath(point),
-                        pathMode
+                        pathMode,
+                        spawnEffects,
+                        deathEffects
                 ));
             }
         }
@@ -85,6 +93,8 @@ public class SpawnPointManager {
     /**
      * Adds or overwrites a spawn point (location, amount, path and
      * path-mode included) and writes it to spawnpoints.yml immediately.
+     * Doesn't touch the "effects" section: those are only ever hand-edited
+     * in spawnpoints.yml, so whatever's already on disk is left as-is.
      */
     public void save(SpawnPoint point) {
         spawnPoints.put(point.id(), point);
@@ -190,13 +200,15 @@ public class SpawnPointManager {
             return false;
         }
         save(new SpawnPoint(existing.id(), existing.worldName(), existing.x(), existing.y(), existing.z(),
-                existing.yaw(), existing.amount(), existing.path(), mode));
+                existing.yaw(), existing.amount(), existing.path(), mode, existing.spawnEffects(),
+                existing.deathEffects()));
         return true;
     }
 
     private SpawnPoint withPath(SpawnPoint existing, List<Waypoint> newPath) {
         return new SpawnPoint(existing.id(), existing.worldName(), existing.x(), existing.y(), existing.z(),
-                existing.yaw(), existing.amount(), newPath, existing.pathMode());
+                existing.yaw(), existing.amount(), newPath, existing.pathMode(), existing.spawnEffects(),
+                existing.deathEffects());
     }
 
     private void persist() {

@@ -2,6 +2,7 @@ package dev.heytozzz.duckhunt.spawn;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.config.ConfigManager;
+import dev.heytozzz.duckhunt.effect.EffectPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -37,6 +38,8 @@ import java.util.function.Consumer;
  * enabled, walks each one along its spawn point's waypoint path using
  * real pathfinding AI. Each spawn point can keep several ducks alive at
  * once, up to its configured capacity, all patrolling the same path.
+ * Also plays each spawn point's spawn sound/particle effects (falling
+ * back to config.yml's defaults) the moment a duck appears.
  */
 public class DuckSpawner {
 
@@ -104,6 +107,7 @@ public class DuckSpawner {
         });
 
         applyDuckBehavior(duck, speed);
+        EffectPlayer.play(location, point.effectiveSpawnEffects(config.getDefaultSpawnEffects()));
 
         activeBySpawnId.computeIfAbsent(point.id(), id -> new LinkedHashSet<>()).add(duck.getUniqueId());
         pathStateByDuck.put(duck.getUniqueId(), new PathState());

@@ -92,3 +92,54 @@ kill-broadcast:
   # radius - only sent to players within "radius" blocks of the kill.
   mode: radius
   radius: 100.0
+
+# Sounds and particles played when a duck spawns / is caught. Both
+# "sounds" and "particles" accept any number of entries, and every entry
+# listed plays at once (e.g. two sounds and a particle together).
+#
+# Individual spawn points can override either (or both) of these
+# entirely by adding their own "effects.spawn"/"effects.death" section in
+# spawnpoints.yml — see that file's template for the exact layout. A
+# spawn point with no "effects" section of its own just uses these
+# defaults.
+effects:
+  spawn:
+    sounds:
+      # "sound" accepts a vanilla shorthand key (resolved as
+      # "minecraft:<key>") or a custom resource-pack key in
+      # "namespace:key" form (e.g. "htz:duck_quack_spawn") — the client
+      # just stays silent if it doesn't have that sound.
+      - sound: entity.chicken.egg
+        volume: 1.0
+        pitch: 1.3
+    particles:
+      # "particle" is a org.bukkit.Particle name (case-insensitive). The
+      # offsets are a random spread around the spawn point on each axis;
+      # "speed" is the particle's extra motion/data value.
+      - particle: poof
+        count: 8
+        offset-x: 0.3
+        offset-y: 0.3
+        offset-z: 0.3
+        speed: 0.02
+  death:
+    sounds:
+      - sound: entity.generic.explode
+        volume: 0.4
+        pitch: 1.7
+      - sound: entity.experience_orb.pickup
+        volume: 0.8
+        pitch: 1.0
+    particles:
+      - particle: smoke
+        count: 10
+        offset-x: 0.4
+        offset-y: 0.4
+        offset-z: 0.4
+        speed: 0.05
+      - particle: cloud
+        count: 6
+        offset-x: 0.3
+        offset-y: 0.3
+        offset-z: 0.3
+        speed: 0.02

@@ -21,6 +21,13 @@
 # "path-mode" is optional per spawn point. Omit it to fall back to
 # "spawn.default-path-mode" in config.yml.
 #
+# "effects.spawn"/"effects.death" are optional per spawn point, hand-edited
+# only (no command sets them). Omit either section entirely to fall back
+# to "effects.spawn"/"effects.death" in config.yml for that event. Same
+# "sounds"/"particles" layout as config.yml — see there for the field
+# reference. A spawn point can override just one of the two events and
+# still fall back to the default for the other.
+#
 # Manual layout reference, if you'd rather edit this by hand:
 #
 # points:
@@ -39,4 +46,21 @@
 #       - x: 5.5
 #         y: 65.0
 #         z: 8.0
+#     effects:
+#       spawn:
+#         sounds:
+#           - sound: htz:duck_quack_spawn
+#             volume: 1.0
+#             pitch: 1.0
+#         particles:
+#           - particle: happy_villager
+#             count: 5
+#       death:
+#         sounds:
+#           - sound: htz:duck_quack_death
+#             volume: 1.0
+#             pitch: 0.9
+#         particles:
+#           - particle: cloud
+#             count: 12
 points: {}

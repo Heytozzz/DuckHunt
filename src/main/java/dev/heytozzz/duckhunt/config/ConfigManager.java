@@ -1,6 +1,8 @@
 package dev.heytozzz.duckhunt.config;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.effect.EffectConfig;
+import dev.heytozzz.duckhunt.effect.EffectSet;
 import dev.heytozzz.duckhunt.spawn.PathMode;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
@@ -44,6 +46,9 @@ public class ConfigManager {
     private boolean broadcastEnabled;
     private BroadcastMode broadcastMode;
     private double broadcastRadius;
+
+    private EffectSet defaultSpawnEffects;
+    private EffectSet defaultDeathEffects;
 
     public ConfigManager(DuckHuntPlugin plugin) {
         this.plugin = plugin;
@@ -90,6 +95,15 @@ public class ConfigManager {
             broadcastMode = BroadcastMode.GLOBAL;
         }
         broadcastRadius = Math.max(0.0, config.getDouble("kill-broadcast.radius", 100.0));
+
+        defaultSpawnEffects = EffectConfig.parse(config.getConfigurationSection("effects.spawn"), plugin.getLogger());
+        if (defaultSpawnEffects == null) {
+            defaultSpawnEffects = EffectSet.EMPTY;
+        }
+        defaultDeathEffects = EffectConfig.parse(config.getConfigurationSection("effects.death"), plugin.getLogger());
+        if (defaultDeathEffects == null) {
+            defaultDeathEffects = EffectSet.EMPTY;
+        }
     }
 
     /**
@@ -292,5 +306,23 @@ public class ConfigManager {
         plugin.getConfig().set("kill-broadcast.mode", "radius");
         plugin.getConfig().set("kill-broadcast.radius", radius);
         plugin.saveConfig();
+    }
+
+    /**
+     * Server-wide default sounds/particles played when a duck spawns,
+     * used whenever a spawn point doesn't define its own "effects.spawn"
+     * override in spawnpoints.yml.
+     */
+    public EffectSet getDefaultSpawnEffects() {
+        return defaultSpawnEffects;
+    }
+
+    /**
+     * Server-wide default sounds/particles played when a duck is caught,
+     * used whenever a spawn point doesn't define its own "effects.death"
+     * override in spawnpoints.yml.
+     */
+    public EffectSet getDefaultDeathEffects() {
+        return defaultDeathEffects;
     }
 }

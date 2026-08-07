@@ -1,5 +1,6 @@
 package dev.heytozzz.duckhunt.spawn;
 
+import dev.heytozzz.duckhunt.effect.EffectSet;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -11,18 +12,25 @@ import java.util.List;
 /**
  * Immutable representation of a configured duck spawn point.
  *
- * @param amount   how many ducks this point should keep alive at once, or
- *                 {@code null} to fall back to the server-wide default
- *                 ({@code spawn.default-amount} in config.yml).
- * @param path     ordered waypoints (added via "/duckhunt admin spawner <id> path add")
- *                 that every duck spawned here patrols, in addition to
- *                 this point's own location as the starting waypoint.
- * @param pathMode what a duck does after reaching the last waypoint, or
- *                 {@code null} to fall back to the server-wide default
- *                 ({@code spawn.default-path-mode} in config.yml).
+ * @param amount        how many ducks this point should keep alive at once, or
+ *                      {@code null} to fall back to the server-wide default
+ *                      ({@code spawn.default-amount} in config.yml).
+ * @param path          ordered waypoints (added via "/duckhunt admin spawner <id> path add")
+ *                      that every duck spawned here patrols, in addition to
+ *                      this point's own location as the starting waypoint.
+ * @param pathMode      what a duck does after reaching the last waypoint, or
+ *                      {@code null} to fall back to the server-wide default
+ *                      ({@code spawn.default-path-mode} in config.yml).
+ * @param spawnEffects  sounds/particles played when a duck spawns here, or
+ *                      {@code null} to fall back to config.yml's "effects.spawn".
+ *                      Hand-edited in spawnpoints.yml; see its template for the format.
+ * @param deathEffects  sounds/particles played when a duck spawned here is
+ *                      caught, or {@code null} to fall back to config.yml's
+ *                      "effects.death". Hand-edited in spawnpoints.yml.
  */
 public record SpawnPoint(String id, String worldName, double x, double y, double z, float yaw, Integer amount,
-                          List<Waypoint> path, @Nullable PathMode pathMode) {
+                          List<Waypoint> path, @Nullable PathMode pathMode, @Nullable EffectSet spawnEffects,
+                          @Nullable EffectSet deathEffects) {
 
     public SpawnPoint {
         path = (path == null) ? List.of() : List.copyOf(path);
@@ -58,6 +66,26 @@ public record SpawnPoint(String id, String worldName, double x, double y, double
      */
     public PathMode effectivePathMode(PathMode defaultMode) {
         return pathMode != null ? pathMode : defaultMode;
+    }
+
+    /**
+     * @param defaultEffects the server-wide default ("effects.spawn" in
+     *                       config.yml) to fall back to.
+     * @return this spawn point's own spawn-effects override if set,
+     * otherwise {@code defaultEffects}.
+     */
+    public EffectSet effectiveSpawnEffects(EffectSet defaultEffects) {
+        return spawnEffects != null ? spawnEffects : defaultEffects;
+    }
+
+    /**
+     * @param defaultEffects the server-wide default ("effects.death" in
+     *                       config.yml) to fall back to.
+     * @return this spawn point's own death-effects override if set,
+     * otherwise {@code defaultEffects}.
+     */
+    public EffectSet effectiveDeathEffects(EffectSet defaultEffects) {
+        return deathEffects != null ? deathEffects : defaultEffects;
     }
 
     /**
