@@ -3,9 +3,12 @@ package dev.heytozzz.duckhunt.config;
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.effect.EffectConfig;
 import dev.heytozzz.duckhunt.effect.EffectSet;
+import dev.heytozzz.duckhunt.effect.ParticleEffect;
 import dev.heytozzz.duckhunt.event.EventScope;
 import dev.heytozzz.duckhunt.event.EventScopeConfig;
 import dev.heytozzz.duckhunt.spawn.PathMode;
+import org.bukkit.Particle;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
@@ -33,6 +36,13 @@ public class ConfigManager {
     private boolean duckAiEnabled;
     private boolean duckSilent;
     private boolean duckGlowing;
+
+    private boolean rareDuckEnabled;
+    private double rareDuckChance;
+    private double rareSpeedMultiplier;
+    private double rarePointsMultiplier;
+    private ParticleEffect rareDuckParticle;
+    private int rareParticleIntervalTicks;
 
     private int defaultDuckAmount;
     private boolean instantRespawn;
@@ -80,6 +90,13 @@ public class ConfigManager {
         duckAiEnabled = config.getBoolean("duck.ai-enabled", false);
         duckSilent = config.getBoolean("duck.silent", true);
         duckGlowing = config.getBoolean("duck.glowing", false);
+
+        rareDuckEnabled = config.getBoolean("duck.rare.enabled", true);
+        rareDuckChance = clamp01(config.getDouble("duck.rare.chance", 0.05));
+        rareSpeedMultiplier = Math.max(1.0, config.getDouble("duck.rare.speed-multiplier", 1.6));
+        rarePointsMultiplier = Math.max(1.0, config.getDouble("duck.rare.points-multiplier", 4.0));
+        rareParticleIntervalTicks = Math.max(1, config.getInt("duck.rare.particle-interval-ticks", 4));
+        rareDuckParticle = parseRareParticle(config.getConfigurationSection("duck.rare.particle"));
 
         defaultDuckAmount = Math.max(1, config.getInt("spawn.default-amount", 1));
         instantRespawn = config.getBoolean("spawn.instant-respawn", false);
@@ -170,6 +187,39 @@ public class ConfigManager {
         }
     }
 
+    private static final ParticleEffect DEFAULT_RARE_PARTICLE =
+            new ParticleEffect(Particle.END_ROD, 2, 0.2, 0.3, 0.2, 0.0);
+
+    /**
+     * Parses "duck.rare.particle": same shape as one entry of an
+     * {@link EffectSet}'s particle list, just not wrapped in a list
+     * since a rare duck only ever has the one trailing particle.
+     */
+    private ParticleEffect parseRareParticle(@Nullable ConfigurationSection section) {
+        if (section == null) {
+            return DEFAULT_RARE_PARTICLE;
+        }
+        String rawType = section.getString("particle", "end_rod");
+        Particle particle;
+        try {
+            particle = Particle.valueOf(rawType.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning(
+                    "Invalid 'duck.rare.particle.particle': '" + rawType + "', falling back to end_rod.");
+            particle = Particle.END_ROD;
+        }
+        int count = Math.max(0, section.getInt("count", 2));
+        double offsetX = section.getDouble("offset-x", 0.2);
+        double offsetY = section.getDouble("offset-y", 0.3);
+        double offsetZ = section.getDouble("offset-z", 0.2);
+        double speed = section.getDouble("speed", 0.0);
+        return new ParticleEffect(particle, count, offsetX, offsetY, offsetZ, speed);
+    }
+
+    private double clamp01(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
     public double getDuckHealth() {
         return duckHealth;
     }
@@ -214,6 +264,51 @@ public class ConfigManager {
 
     public boolean isDuckGlowing() {
         return duckGlowing;
+    }
+
+    /**
+     * Whether a duck can roll as "rare" at spawn time (glowing,
+     * faster, worth more points, with a particle trail).
+     */
+    public boolean isRareDuckEnabled() {
+        return rareDuckEnabled;
+    }
+
+    /**
+     * Chance (0.0-1.0) that a newly-spawned duck is rare.
+     */
+    public double getRareDuckChance() {
+        return rareDuckChance;
+    }
+
+    /**
+     * Multiplies a rare duck's normally-rolled speed.
+     */
+    public double getRareSpeedMultiplier() {
+        return rareSpeedMultiplier;
+    }
+
+    /**
+     * Multiplies the points a rare duck is worth on top of
+     * {@link #getPointsForSpeed(double)} — e.g. 4.0 means 4x the points
+     * a normal duck with that same (already-multiplied) speed would be worth.
+     */
+    public double getRarePointsMultiplier() {
+        return rarePointsMultiplier;
+    }
+
+    /**
+     * The particle trail a rare duck leaves behind while alive.
+     */
+    public ParticleEffect getRareDuckParticle() {
+        return rareDuckParticle;
+    }
+
+    /**
+     * How often (in ticks) a rare duck's particle trail is spawned.
+     */
+    public int getRareParticleIntervalTicks() {
+        return rareParticleIntervalTicks;
     }
 
     /**

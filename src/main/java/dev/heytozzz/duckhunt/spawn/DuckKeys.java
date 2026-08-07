@@ -14,6 +14,7 @@ public final class DuckKeys {
 
     private static NamespacedKey spawnKey;
     private static NamespacedKey speedKey;
+    private static NamespacedKey pointsMultiplierKey;
 
     private DuckKeys() {
     }
@@ -21,6 +22,7 @@ public final class DuckKeys {
     public static void init(DuckHuntPlugin plugin) {
         spawnKey = new NamespacedKey(plugin, "spawn");
         speedKey = new NamespacedKey(plugin, "speed");
+        pointsMultiplierKey = new NamespacedKey(plugin, "points_multiplier");
     }
 
     /**
@@ -40,5 +42,15 @@ public final class DuckKeys {
      */
     public static NamespacedKey speed() {
         return speedKey;
+    }
+
+    /**
+     * Key (set on every duck) holding its points multiplier — 1.0 for a
+     * normal duck, or "duck.rare.points-multiplier" for a rare one — so
+     * the death listener can work out its final leaderboard/event points
+     * without needing to know whether it was rare.
+     */
+    public static NamespacedKey pointsMultiplier() {
+        return pointsMultiplierKey;
     }
 }

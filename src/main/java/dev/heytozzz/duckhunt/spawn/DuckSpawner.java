@@ -3,6 +3,7 @@ package dev.heytozzz.duckhunt.spawn;
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.effect.EffectPlayer;
+import dev.heytozzz.duckhunt.effect.ParticleEffect;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -21,6 +22,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -39,7 +41,9 @@ import java.util.function.Consumer;
  * real pathfinding AI. Each spawn point can keep several ducks alive at
  * once, up to its configured capacity, all patrolling the same path.
  * Also plays each spawn point's spawn sound/particle effects (falling
- * back to config.yml's defaults) the moment a duck appears.
+ * back to config.yml's defaults) the moment a duck appears, and has a
+ * small chance ("duck.rare") of making that duck rare: always glowing,
+ * faster, worth more points, and trailing its own particle effect.
  */
 public class DuckSpawner {
 
@@ -59,7 +63,14 @@ public class DuckSpawner {
     // duckId -> where it currently is along its spawn point's route.
     private final Map<UUID, PathState> pathStateByDuck = new HashMap<>();
 
+    // Ducks that rolled "rare" this session, purely to drive their
+    // particle trail — their points multiplier is stored on the duck
+    // itself (see DuckKeys#pointsMultiplier()), so scoring doesn't
+    // depend on this in-memory set.
+    private final Set<UUID> rareDucks = new LinkedHashSet<>();
+
     private BukkitTask pathTask;
+    private BukkitTask rareParticleTask;
 
     public DuckSpawner(DuckHuntPlugin plugin) {
         this.plugin = plugin;
@@ -98,15 +109,32 @@ public class DuckSpawner {
         Class<? extends Mob> mobClass = mobClassOf(pickRandomDuckType());
         double speed = rollSpeed();
 
+        // Small chance of this duck being "rare": faster, worth more
+        // points, and visually distinct (glowing + a particle trail).
+        boolean rare = config.isRareDuckEnabled()
+                && ThreadLocalRandom.current().nextDouble() < config.getRareDuckChance();
+        if (rare) {
+            speed *= config.getRareSpeedMultiplier();
+        }
+        double pointsMultiplier = rare ? config.getRarePointsMultiplier() : 1.0;
+
         Mob duck = spawnMob(location, mobClass, entity -> {
             entity.setPersistent(true);
             entity.setRemoveWhenFarAway(false);
             entity.addScoreboardTag(DuckKeys.TAG_DUCK);
             entity.getPersistentDataContainer().set(DuckKeys.spawn(), PersistentDataType.STRING, point.id());
             entity.getPersistentDataContainer().set(DuckKeys.speed(), PersistentDataType.DOUBLE, speed);
+            entity.getPersistentDataContainer()
+                    .set(DuckKeys.pointsMultiplier(), PersistentDataType.DOUBLE, pointsMultiplier);
         });
 
         applyDuckBehavior(duck, speed);
+        if (rare) {
+            // Always glowing regardless of "duck.glowing", so it stands
+            // out from a normal duck even with that setting off.
+            duck.setGlowing(true);
+            rareDucks.add(duck.getUniqueId());
+        }
         EffectPlayer.play(location, point.effectiveSpawnEffects(config.getDefaultSpawnEffects()));
 
         activeBySpawnId.computeIfAbsent(point.id(), id -> new LinkedHashSet<>()).add(duck.getUniqueId());
@@ -256,6 +284,7 @@ public class DuckSpawner {
     public void handleDeath(Mob duck) {
         UUID duckId = duck.getUniqueId();
         pathStateByDuck.remove(duckId);
+        rareDucks.remove(duckId);
 
         Team team = Bukkit.getScoreboardManager().getMainScoreboard().getTeam(DUCK_TEAM_NAME);
         if (team != null) {
@@ -285,46 +314,19 @@ public class DuckSpawner {
 
     /**
      * Removes every currently tracked duck plus any stray tagged mobs
-     * left over from a previous run (e.g. after a crash or a reload).
+     * left over from a previous run (e.g. after a crash). Called on
+     * every plugin enable (see the class-level note on why ducks aren't
+     * carried over across a restart instead), plus available as
+     * "/duckhunt admin clear".
      */
     public void clearAll() {
         activeBySpawnId.clear();
         pathStateByDuck.clear();
+        rareDucks.clear();
         for (World world : plugin.getServer().getWorlds()) {
             world.getEntitiesByClass(Mob.class).stream()
                     .filter(entity -> entity.getScoreboardTags().contains(DuckKeys.TAG_DUCK))
                     .forEach(Entity::remove);
-        }
-    }
-
-    /**
-     * Rebuilds the "active ducks per spawn point" tracking from ducks
-     * already present in the world. Needed on startup, since ducks
-     * spawned in a previous server session (they're persistent) would
-     * otherwise be invisible to this session's in-memory tracking,
-     * causing the plugin to spawn past the configured capacity. Also
-     * re-strips their AI goals, since goal removal doesn't survive a
-     * server restart. Reuses each duck's already-rolled speed (stored on
-     * it) instead of rolling a new one.
-     */
-    public void reconcileFromWorld() {
-        activeBySpawnId.clear();
-        pathStateByDuck.clear();
-        for (World world : plugin.getServer().getWorlds()) {
-            for (Mob duck : world.getEntitiesByClass(Mob.class)) {
-                if (!duck.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
-                    continue;
-                }
-                String spawnId = duck.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
-                if (spawnId == null) {
-                    continue;
-                }
-                double speed = duck.getPersistentDataContainer()
-                        .getOrDefault(DuckKeys.speed(), PersistentDataType.DOUBLE, config.getMinDuckSpeed());
-                activeBySpawnId.computeIfAbsent(spawnId, id -> new LinkedHashSet<>()).add(duck.getUniqueId());
-                pathStateByDuck.put(duck.getUniqueId(), new PathState());
-                applyDuckBehavior(duck, speed);
-            }
         }
     }
 
@@ -347,6 +349,57 @@ public class DuckSpawner {
         if (pathTask != null) {
             pathTask.cancel();
             pathTask = null;
+        }
+    }
+
+    /**
+     * Starts the repeating task that spawns a rare duck's particle trail
+     * ("duck.rare.particle"/"duck.rare.particle-interval-ticks"). No-op
+     * if already running.
+     */
+    public void startRareDuckEffects() {
+        if (rareParticleTask != null) {
+            return;
+        }
+        long interval = config.getRareParticleIntervalTicks();
+        rareParticleTask = plugin.getServer().getScheduler()
+                .runTaskTimer(plugin, this::tickRareParticles, interval, interval);
+    }
+
+    /**
+     * Stops the rare-duck particle-trail task, if running.
+     */
+    public void stopRareDuckEffects() {
+        if (rareParticleTask != null) {
+            rareParticleTask.cancel();
+            rareParticleTask = null;
+        }
+    }
+
+    /**
+     * Spawns every currently-alive rare duck's trailing particle at its
+     * location. Stray entries (the duck died some other way, or its
+     * chunk unloaded and it can no longer be resolved) are pruned here
+     * as a safety net, on top of the cleanup already done in
+     * {@link #handleDeath}/{@link #clearAll}.
+     */
+    private void tickRareParticles() {
+        if (rareDucks.isEmpty()) {
+            return;
+        }
+        ParticleEffect particle = config.getRareDuckParticle();
+        Iterator<UUID> iterator = rareDucks.iterator();
+        while (iterator.hasNext()) {
+            UUID duckId = iterator.next();
+            Entity entity = plugin.getServer().getEntity(duckId);
+            if (!(entity instanceof Mob duck) || duck.isDead()) {
+                iterator.remove();
+                continue;
+            }
+            World world = duck.getWorld();
+            Location center = duck.getLocation().add(0, duck.getHeight() / 2.0, 0);
+            world.spawnParticle(particle.particle(), center, particle.count(),
+                    particle.offsetX(), particle.offsetY(), particle.offsetZ(), particle.speed());
         }
     }
 

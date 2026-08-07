@@ -21,8 +21,9 @@ import org.jetbrains.annotations.Nullable;
  * Listens for duck deaths, frees up its spawn point's capacity, plays its
  * elimination sound/particle effects, records a leaderboard kill (if the
  * killer was far enough away) worth points based on how fast the duck
- * was, feeds those same points into that spawn point's active event (if
- * any), and (if enabled) broadcasts the kill.
+ * was (multiplied further if it happened to be a rare duck), feeds those
+ * same points into that spawn point's active event (if any), and (if
+ * enabled) broadcasts the kill.
  */
 public class DuckDeathListener implements Listener {
 
@@ -47,6 +48,8 @@ public class DuckDeathListener implements Listener {
         Location deathLocation = duck.getLocation();
         double speed = duck.getPersistentDataContainer()
                 .getOrDefault(DuckKeys.speed(), PersistentDataType.DOUBLE, plugin.getConfigManager().getMinDuckSpeed());
+        double pointsMultiplier = duck.getPersistentDataContainer()
+                .getOrDefault(DuckKeys.pointsMultiplier(), PersistentDataType.DOUBLE, 1.0);
         String spawnId = duck.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
 
         // Belt-and-suspenders: on top of clearLootTable() set at spawn
@@ -59,7 +62,7 @@ public class DuckDeathListener implements Listener {
 
         if (killer != null) {
             if (qualifiesForLeaderboard(killer, deathLocation)) {
-                int points = plugin.getConfigManager().getPointsForSpeed(speed);
+                int points = (int) Math.round(plugin.getConfigManager().getPointsForSpeed(speed) * pointsMultiplier);
                 int total = plugin.getLeaderboardManager().recordKill(killer, points);
                 plugin.getLangManager().send(killer, "top.points-earned",
                         Placeholder.unparsed("points", String.valueOf(points)),

@@ -14,7 +14,15 @@ duck:
   # single ZOMBIE. Careful with mobs that explode or ranged-attack
   # (Creeper, Skeleton archers with AI enabled) — they're allowed, but
   # behave like their vanilla selves besides the changes below.
-  types: [ZOMBIE, HUSK, SKELETON, DROWNED, WITHER_SKELETON, ENDERMAN, WITCH, CREEPER, ZOMBIFIED_PIGLIN, VINDICATOR, PILLAGER, EVOKER, BLAZE, CHICKEN, GOAT]
+  # NOTE: ENDERMAN is intentionally excluded here. It's not a bug in
+  # this plugin — vanilla Minecraft hardcodes Endermen to always
+  # teleport away right before a projectile (arrow, snowball, etc.)
+  # would hit them, at the entity level rather than through the AI goal
+  # system this plugin can strip. There's no supported way to disable
+  # that from a plugin, so it's left out of the default pool. Add it
+  # back at your own risk if you're fine with players only being able
+  # to melee it.
+  types: [ZOMBIE, HUSK, SKELETON, DROWNED, WITHER_SKELETON, WITCH, CREEPER, ZOMBIFIED_PIGLIN, VINDICATOR, PILLAGER, EVOKER, BLAZE, CHICKEN, GOAT]
   # Max health / current health of the duck. Lower = dies in fewer hits.
   health: 1.0
   # Each duck's movement speed is randomly rolled in this range (applied
@@ -38,6 +46,37 @@ duck:
   silent: true
   # Whether the duck glows (useful while testing spawn points/paths).
   glowing: false
+
+  # A newly-spawned duck has a small chance of being "rare": always
+  # glowing (regardless of "glowing" above), faster, worth more points,
+  # and trailing its own particle effect — a more valuable, more
+  # noticeable target to go for.
+  rare:
+    enabled: true
+    # Chance (0.0-1.0) that a given spawn roll is rare.
+    chance: 0.05
+    # Multiplies the duck's normally-rolled speed (from "speed" above).
+    speed-multiplier: 1.6
+    # Multiplies the points it's worth on top of the normal speed-based
+    # formula (see "leaderboard.min-points"/"max-points" below) — e.g.
+    # 4.0 means 4x the points a normal duck at that same (already
+    # multiplied) speed would be worth. Set to 1.0 for no points bonus,
+    # just the visual/speed difference.
+    points-multiplier: 4.0
+    # The particle trailing behind it while it's alive. "particle" is an
+    # org.bukkit.Particle name (case-insensitive); the offsets are a
+    # random spread around it on each axis, "speed" is the particle's
+    # extra motion/data value.
+    particle:
+      particle: end_rod
+      count: 2
+      offset-x: 0.2
+      offset-y: 0.3
+      offset-z: 0.2
+      speed: 0.0
+    # How often (in ticks) the trail particle is spawned.
+    particle-interval-ticks: 4
+
   # Ducks always have collisions with other entities disabled (not
   # configurable) so a fast duck can freely overtake a slower one
   # instead of pushing/bumping into it.

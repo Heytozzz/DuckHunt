@@ -54,7 +54,15 @@ public final class DuckHuntPlugin extends JavaPlugin {
         this.eventManager.load();
 
         this.duckSpawner = new DuckSpawner(this);
-        this.duckSpawner.reconcileFromWorld();
+        // Ducks don't survive a restart cleanly: their stripped AI goals
+        // and active pathfinder navigation are runtime-only state that
+        // Minecraft doesn't persist, so a duck sitting in a chunk that
+        // wasn't loaded yet at this exact point of server startup would
+        // silently regain full vanilla behaviour (wandering, attacking...)
+        // the next time its chunk loads, with nothing left to re-strip it.
+        // Clearing on every enable and refilling from scratch below avoids
+        // that entirely, instead of trying to reconcile leftover ducks.
+        this.duckSpawner.clearAll();
         this.autoSpawnManager = new AutoSpawnManager(this);
 
         PluginManager pluginManager = getServer().getPluginManager();
@@ -72,7 +80,12 @@ public final class DuckHuntPlugin extends JavaPlugin {
         }
 
         duckSpawner.startPathFollowing();
+        duckSpawner.startRareDuckEffects();
         eventManager.start();
+
+        // Restock every spawn point right away, instead of leaving them
+        // empty until the first auto-spawn tick or a manual command.
+        duckSpawner.fillAll();
     }
 
     @Override
@@ -82,6 +95,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
         }
         if (duckSpawner != null) {
             duckSpawner.stopPathFollowing();
+            duckSpawner.stopRareDuckEffects();
         }
         if (eventManager != null) {
             eventManager.stop();
