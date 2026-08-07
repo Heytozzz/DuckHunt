@@ -23,8 +23,17 @@ public final class DuckHuntPlugin extends JavaPlugin {
     private LeaderboardManager leaderboardManager;
     private EventManager eventManager;
 
+    private static final String BANNER =
+            "      ,~~.\n" +
+            "     (  6 )-_,\n" +
+            "(\\___ )=='-'    \uD835\uDDE7\uD835\uDDF2\uD835\uDDF7\uD835\uDDD8\u0328\uD835\uDDFB̶\uD835\uDDF5̶\uD835\uDDF2̶\uD835\uDDF4̶ 1.2.0 enabled\n" +
+            " \\ .   ) )\n" +
+            "  \\_`-'_/     ";
+
     @Override
     public void onEnable() {
+        System.out.println(BANNER);
+
         DuckKeys.init(this);
 
         this.configManager = new ConfigManager(this);
@@ -62,8 +71,6 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
         duckSpawner.startPathFollowing();
         eventManager.start();
-
-        getLogger().info("DuckHunt enabled.");
     }
 
     @Override
