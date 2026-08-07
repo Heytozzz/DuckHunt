@@ -2,7 +2,7 @@
 # El formato usa etiquetas MiniMessage, ej: <green>...</green>.
 # Los marcadores como <id> son reemplazados por el plugin, no los borres.
 
-prefix: "<gray>[<green>DuckHunt</green>]</gray> "
+prefix: "<gray>[<yellow>DuckHunt</yellow>]</gray> "
 
 reload:
   success: "<green>Configuración recargada.</green>"
@@ -37,8 +37,9 @@ kill:
 
 top:
   header: "<green>Top cazadores de patos:</green>"
-  entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><kills></yellow> pato(s)"
+  entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><points></yellow> punto(s) <dark_gray>(<kills> pato(s))</dark_gray>"
   empty: "<yellow>Todavía no hay kills en el leaderboard. Solo cuentan los patos eliminados desde la distancia mínima configurada.</yellow>"
+  points-earned: "<green>+<yellow><points></yellow> punto(s)! <dark_gray>(total: <total>)</dark_gray></green>"
   reset: "<green>Se reinició el registro de <yellow><player></yellow> en el leaderboard.</green>"
   reset-all: "<green>Se reinició todo el leaderboard.</green>"
   reset-not-found: "<yellow><player> no tiene registro en el leaderboard para reiniciar.</yellow>"

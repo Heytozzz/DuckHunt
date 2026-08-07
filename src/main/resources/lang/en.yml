@@ -2,7 +2,7 @@
 # Formatting uses MiniMessage tags, e.g. <green>...</green>.
 # Placeholders like <id> are substituted by the plugin, keep them as-is.
 
-prefix: "<gray>[<green>DuckHunt</green>]</gray> "
+prefix: "<gray>[<yellow>DuckHunt</yellow>]</gray> "
 
 reload:
   success: "<green>Configuration reloaded.</green>"
@@ -37,8 +37,9 @@ kill:
 
 top:
   header: "<green>Top duck hunters:</green>"
-  entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><kills></yellow> kill(s)"
+  entry: "<gray> - <yellow>#<rank></yellow> <white><player></white> <dark_gray>-</dark_gray> <yellow><points></yellow> point(s) <dark_gray>(<kills> kill(s))</dark_gray>"
   empty: "<yellow>No leaderboard kills yet. Kills only count from at least the configured distance away.</yellow>"
+  points-earned: "<green>+<yellow><points></yellow> point(s)! <dark_gray>(total: <total>)</dark_gray></green>"
   reset: "<green>Reset <yellow><player></yellow>'s leaderboard entry.</green>"
   reset-all: "<green>Reset the entire leaderboard.</green>"
   reset-not-found: "<yellow><player> has no leaderboard entry to reset.</yellow>"

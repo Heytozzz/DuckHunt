@@ -7,9 +7,12 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.World;
+import org.bukkit.attribute.Attributable;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Zombie;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
@@ -21,13 +24,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 /**
- * Handles spawning and despawning of "ducks" (plain zombies, tagged and
- * stat-adjusted) and, when enabled, walks each one along its spawn
- * point's waypoint path using real pathfinding AI. Each spawn point can
- * keep several ducks alive at once, up to its configured capacity, all
- * patrolling the same path.
+ * Handles spawning and despawning of "ducks" — a random mob picked from
+ * "duck.types" each time, tagged and stat-adjusted, each with its own
+ * randomly-rolled movement speed (faster ducks are worth more leaderboard
+ * points, see {@link ConfigManager#getPointsForSpeed(double)}) — and, when
+ * enabled, walks each one along its spawn point's waypoint path using
+ * real pathfinding AI. Each spawn point can keep several ducks alive at
+ * once, up to its configured capacity, all patrolling the same path.
  */
 public class DuckSpawner {
 
@@ -58,7 +65,9 @@ public class DuckSpawner {
 
     /**
      * Spawns a single duck at the given spawn point, unless it's already
-     * at capacity or its world isn't loaded.
+     * at capacity or its world isn't loaded. The duck's mob type is
+     * picked at random from "duck.types" and its movement speed is
+     * randomly rolled within "duck.speed.min"/"duck.speed.max".
      *
      * @return true if a duck was actually spawned.
      */
@@ -74,17 +83,21 @@ public class DuckSpawner {
             return false;
         }
 
-        Zombie zombie = location.getWorld().spawn(location, Zombie.class, entity -> {
+        Class<? extends Mob> mobClass = mobClassOf(pickRandomDuckType());
+        double speed = rollSpeed();
+
+        Mob duck = spawnMob(location, mobClass, entity -> {
             entity.setPersistent(true);
             entity.setRemoveWhenFarAway(false);
             entity.addScoreboardTag(DuckKeys.TAG_DUCK);
             entity.getPersistentDataContainer().set(DuckKeys.spawn(), PersistentDataType.STRING, point.id());
+            entity.getPersistentDataContainer().set(DuckKeys.speed(), PersistentDataType.DOUBLE, speed);
         });
 
-        applyDuckBehavior(zombie);
+        applyDuckBehavior(duck, speed);
 
-        activeBySpawnId.computeIfAbsent(point.id(), id -> new LinkedHashSet<>()).add(zombie.getUniqueId());
-        pathStateByDuck.put(zombie.getUniqueId(), new PathState());
+        activeBySpawnId.computeIfAbsent(point.id(), id -> new LinkedHashSet<>()).add(duck.getUniqueId());
+        pathStateByDuck.put(duck.getUniqueId(), new PathState());
         return true;
     }
 
@@ -118,52 +131,99 @@ public class DuckSpawner {
     }
 
     /**
-     * Applies stats and behaviour to a duck: health, speed attribute,
-     * visibility flags, and (if path-following is enabled) wipes its
-     * default zombie AI goals so nothing but our own waypoint task moves
-     * or targets it.
+     * Picks a random entry from "duck.types" (already validated to only
+     * contain usable {@link Mob} types by {@link ConfigManager}).
      */
-    private void applyDuckBehavior(Zombie zombie) {
-        setAttribute(zombie, "max_health", config.getDuckHealth());
-        setAttribute(zombie, "movement_speed", config.getDuckMovementSpeed());
-        zombie.setHealth(config.getDuckHealth());
-        zombie.setSilent(config.isDuckSilent());
-        zombie.setGlowing(config.isDuckGlowing());
-        zombie.setCanPickupItems(false);
-        zombie.setShouldBurnInDay(false);
+    private EntityType pickRandomDuckType() {
+        List<EntityType> types = config.getDuckTypes();
+        return types.get(ThreadLocalRandom.current().nextInt(types.size()));
+    }
+
+    /**
+     * Rolls a random speed within "duck.speed.min"/"duck.speed.max"
+     * (inclusive of the minimum; the two collapse to a fixed speed if
+     * equal).
+     */
+    private double rollSpeed() {
+        double min = config.getMinDuckSpeed();
+        double max = config.getMaxDuckSpeed();
+        if (max <= min) {
+            return min;
+        }
+        return min + ThreadLocalRandom.current().nextDouble() * (max - min);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Class<? extends Mob> mobClassOf(EntityType type) {
+        return (Class<? extends Mob>) type.getEntityClass();
+    }
+
+    /**
+     * Generic helper around {@link World#spawn(Location, Class, Consumer)}
+     * that lets call sites work with a plain {@link Mob} reference instead
+     * of needing to know the concrete captured type of a
+     * {@code Class<? extends Mob>} obtained at runtime.
+     */
+    private <T extends Mob> T spawnMob(Location location, Class<T> mobClass, Consumer<Mob> initializer) {
+        return location.getWorld().spawn(location, mobClass, initializer::accept);
+    }
+
+    /**
+     * Applies stats and behaviour to a duck: health, its rolled movement
+     * speed attribute, visibility flags, disabled collisions (so faster
+     * ducks can freely overtake slower ones instead of pushing into
+     * them), and (if path-following is enabled) wipes its default AI
+     * goals so nothing but our own waypoint task moves or targets it.
+     */
+    private void applyDuckBehavior(Mob duck, double speed) {
+        setAttribute(duck, "max_health", config.getDuckHealth());
+        setAttribute(duck, "movement_speed", speed);
+        duck.setHealth(config.getDuckHealth());
+        duck.setSilent(config.isDuckSilent());
+        duck.setGlowing(config.isDuckGlowing());
+        duck.setCanPickupItems(false);
+        // Disables collision resolution with other entities so ducks
+        // never bump/push each other — faster ones simply pass through.
+        duck.setCollidable(false);
         // No loot table at all: the duck must never drop anything.
-        zombie.clearLootTable();
+        duck.clearLootTable();
+
+        // Zombie-family mobs (zombie, husk, drowned, ...) would otherwise
+        // catch fire in daylight; not applicable to other mob families.
+        if (duck instanceof Zombie zombie) {
+            zombie.setShouldBurnInDay(false);
+        }
 
         boolean followPath = config.isDuckAiEnabled();
-        zombie.setAI(followPath);
+        duck.setAI(followPath);
         if (followPath) {
-            // Wipes vanilla zombie behaviour (attacking, wandering,
-            // looking around...) so the only thing driving this duck is
-            // the moveTo() calls issued from tickPaths().
-            Bukkit.getMobGoals().removeAllGoals(zombie);
+            // Wipes vanilla behaviour (attacking, wandering, looking
+            // around...) so the only thing driving this duck is the
+            // moveTo() calls issued from tickPaths().
+            Bukkit.getMobGoals().removeAllGoals(duck);
         }
     }
 
-    private void setAttribute(Zombie zombie, String key, double value) {
+    private void setAttribute(Attributable entity, String key, double value) {
         Attribute attribute = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(key));
         if (attribute == null) {
             return;
         }
-        AttributeInstance instance = zombie.getAttribute(attribute);
+        AttributeInstance instance = entity.getAttribute(attribute);
         if (instance != null) {
             instance.setBaseValue(value);
         }
     }
 
     /**
-     * Called when a duck (zombie) dies. Frees up its spawn point slot and
-     * (if enabled) instantly spawns a replacement.
+     * Called when a duck dies. Frees up its spawn point slot and (if
+     * enabled) instantly spawns a replacement.
      */
-    public void handleDeath(Zombie zombie) {
-        UUID duckId = zombie.getUniqueId();
+    public void handleDeath(Mob duck) {
+        UUID duckId = duck.getUniqueId();
         pathStateByDuck.remove(duckId);
 
-        String spawnId = zombie.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
+        String spawnId = duck.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
         if (spawnId == null) {
             return;
         }
@@ -185,14 +245,14 @@ public class DuckSpawner {
     }
 
     /**
-     * Removes every currently tracked duck plus any stray tagged zombies
+     * Removes every currently tracked duck plus any stray tagged mobs
      * left over from a previous run (e.g. after a crash or a reload).
      */
     public void clearAll() {
         activeBySpawnId.clear();
         pathStateByDuck.clear();
         for (World world : plugin.getServer().getWorlds()) {
-            world.getEntitiesByClass(Zombie.class).stream()
+            world.getEntitiesByClass(Mob.class).stream()
                     .filter(entity -> entity.getScoreboardTags().contains(DuckKeys.TAG_DUCK))
                     .forEach(Entity::remove);
         }
@@ -205,23 +265,26 @@ public class DuckSpawner {
      * otherwise be invisible to this session's in-memory tracking,
      * causing the plugin to spawn past the configured capacity. Also
      * re-strips their AI goals, since goal removal doesn't survive a
-     * server restart.
+     * server restart. Reuses each duck's already-rolled speed (stored on
+     * it) instead of rolling a new one.
      */
     public void reconcileFromWorld() {
         activeBySpawnId.clear();
         pathStateByDuck.clear();
         for (World world : plugin.getServer().getWorlds()) {
-            for (Zombie zombie : world.getEntitiesByClass(Zombie.class)) {
-                if (!zombie.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
+            for (Mob duck : world.getEntitiesByClass(Mob.class)) {
+                if (!duck.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
                     continue;
                 }
-                String spawnId = zombie.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
+                String spawnId = duck.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
                 if (spawnId == null) {
                     continue;
                 }
-                activeBySpawnId.computeIfAbsent(spawnId, id -> new LinkedHashSet<>()).add(zombie.getUniqueId());
-                pathStateByDuck.put(zombie.getUniqueId(), new PathState());
-                applyDuckBehavior(zombie);
+                double speed = duck.getPersistentDataContainer()
+                        .getOrDefault(DuckKeys.speed(), PersistentDataType.DOUBLE, config.getMinDuckSpeed());
+                activeBySpawnId.computeIfAbsent(spawnId, id -> new LinkedHashSet<>()).add(duck.getUniqueId());
+                pathStateByDuck.put(duck.getUniqueId(), new PathState());
+                applyDuckBehavior(duck, speed);
             }
         }
     }
@@ -252,7 +315,7 @@ public class DuckSpawner {
      * Checks every active duck: if it isn't currently walking towards a
      * waypoint (either just spawned or just arrived at the previous
      * one), sends it to the next one according to its spawn point's path
-     * mode.
+     * mode, at its own rolled speed.
      */
     private void tickPaths() {
         if (!config.isDuckAiEnabled()) {
@@ -274,7 +337,7 @@ public class DuckSpawner {
 
             for (UUID duckId : entry.getValue()) {
                 Entity entity = plugin.getServer().getEntity(duckId);
-                if (!(entity instanceof Zombie zombie) || zombie.isDead()) {
+                if (!(entity instanceof Mob duck) || duck.isDead()) {
                     continue;
                 }
 
@@ -283,9 +346,11 @@ public class DuckSpawner {
                     state.index = 0;
                 }
 
-                if (!zombie.getPathfinder().hasPath()) {
+                if (!duck.getPathfinder().hasPath()) {
                     advance(state, route.size(), mode);
-                    zombie.getPathfinder().moveTo(route.get(state.index), config.getDuckMovementSpeed());
+                    double speed = duck.getPersistentDataContainer()
+                            .getOrDefault(DuckKeys.speed(), PersistentDataType.DOUBLE, config.getMinDuckSpeed());
+                    duck.getPathfinder().moveTo(route.get(state.index), speed);
                 }
             }
         }

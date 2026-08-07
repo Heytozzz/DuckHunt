@@ -5,17 +5,18 @@ import dev.heytozzz.duckhunt.config.BroadcastMode;
 import dev.heytozzz.duckhunt.spawn.DuckKeys;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Location;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.persistence.PersistentDataType;
 
 /**
- * Listens for duck (zombie) deaths, frees up its spawn point's capacity,
- * records a leaderboard kill (if the killer was far enough away) and
- * (if enabled) broadcasts the kill.
+ * Listens for duck deaths, frees up its spawn point's capacity, records a
+ * leaderboard kill (if the killer was far enough away) worth points based
+ * on how fast the duck was, and (if enabled) broadcasts the kill.
  */
 public class DuckDeathListener implements Listener {
 
@@ -27,28 +28,34 @@ public class DuckDeathListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onDuckDeath(EntityDeathEvent event) {
-        if (!(event.getEntity() instanceof Zombie zombie)) {
+        if (!(event.getEntity() instanceof Mob duck)) {
             return;
         }
-        if (!zombie.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
+        if (!duck.getScoreboardTags().contains(DuckKeys.TAG_DUCK)) {
             return;
         }
 
         // Grab the killer before the chain is torn down; getKiller() only
         // reflects recent player damage and is unaffected by the removal.
-        Player killer = zombie.getKiller();
-        Location deathLocation = zombie.getLocation();
+        Player killer = duck.getKiller();
+        Location deathLocation = duck.getLocation();
+        double speed = duck.getPersistentDataContainer()
+                .getOrDefault(DuckKeys.speed(), PersistentDataType.DOUBLE, plugin.getConfigManager().getMinDuckSpeed());
 
         // Belt-and-suspenders: on top of clearLootTable() set at spawn
         // time, make absolutely sure nothing drops or grants experience.
         event.getDrops().clear();
         event.setDroppedExp(0);
 
-        plugin.getDuckSpawner().handleDeath(zombie);
+        plugin.getDuckSpawner().handleDeath(duck);
 
         if (killer != null) {
             if (qualifiesForLeaderboard(killer, deathLocation)) {
-                plugin.getLeaderboardManager().recordKill(killer);
+                int points = plugin.getConfigManager().getPointsForSpeed(speed);
+                int total = plugin.getLeaderboardManager().recordKill(killer, points);
+                plugin.getLangManager().send(killer, "top.points-earned",
+                        Placeholder.unparsed("points", String.valueOf(points)),
+                        Placeholder.unparsed("total", String.valueOf(total)));
             }
 
             if (plugin.getConfigManager().isBroadcastEnabled()) {

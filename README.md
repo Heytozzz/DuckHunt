@@ -1,9 +1,12 @@
 # DuckHunt
 
-A duck-hunting minigame plugin for Paper 26.2. Each "duck" is a low-health
-zombie that can patrol a chain of waypoints using real pathfinding AI. The
-duck never drops anything and, if enabled, is instantly replaced when
-caught.
+A duck-hunting minigame plugin for Paper 26.2. Each "duck" is a
+low-health mob — randomly picked from a configurable pool of types, each
+with its own randomly-rolled movement speed — that can patrol a chain of
+waypoints using real pathfinding AI. Faster ducks are worth more
+leaderboard points, and ducks never collide with each other so quicker
+ones can freely overtake slower ones. A duck never drops anything and,
+if enabled, is instantly replaced when caught.
 
 ## Requirements
 
@@ -76,6 +79,21 @@ What happens after the last waypoint depends on the path mode
 A spawn point with no waypoints added just keeps its duck standing at
 the spawn location, same as before.
 
+## Random duck types & speed
+
+Every time a duck spawns, its mob type is picked at random from
+`duck.types` in `config.yml` (default: `ZOMBIE`, `HUSK`, `SKELETON`,
+`SPIDER`, `DROWNED`), and its movement speed is randomly rolled between
+`duck.speed.min` and `duck.speed.max`. That rolled speed sticks with the
+duck for its whole life (survives `/duckhunt admin reload` and server
+restarts) and is what the pathfinder uses to walk its route.
+
+- Any Bukkit `EntityType` that maps to a mob works — invalid or
+  non-mob entries in `duck.types` are skipped with a warning.
+- Ducks always have collisions with other entities disabled, so a fast
+  duck can freely pass through a slower one instead of pushing into it.
+- Faster ducks are worth more leaderboard points — see below.
+
 ## Configuration
 
 Settings live in three separate files inside the plugin's data folder:
@@ -119,8 +137,14 @@ caught.
 ## Leaderboard
 
 `/duckhunt top` shows the `leaderboard.top-size` (default 10) players
-with the most qualifying duck kills, stored in `leaderboard.yml`.
+with the most points, stored in `leaderboard.yml`. Ranking is by total
+points, with kill count as a tiebreaker.
 
+- **Faster ducks are worth more points.** Each qualifying kill awards
+  points linearly interpolated between `leaderboard.min-points` (for a
+  duck rolled at `duck.speed.min`) and `leaderboard.max-points` (for one
+  rolled at `duck.speed.max`) — see [Random duck types &
+  speed](#random-duck-types--speed) above.
 - **Only ranged/skillful kills count.** A kill only counts towards the
   leaderboard if the killer was at least `leaderboard.min-kill-distance`
   blocks (default `10.0`) away from the duck at the moment of death —
@@ -149,15 +173,20 @@ reload`.
 
 ## How movement and cleanup work
 
-Each duck is a single tagged `Zombie`. If `duck.ai-enabled: true`, it's
+Each duck is a single tagged `Mob` (its concrete type is whatever got
+randomly picked from `duck.types`). If `duck.ai-enabled: true`, it's
 spawned with `Bukkit.getMobGoals().removeAllGoals(...)` so none of its
-default zombie behaviour (attacking, wandering, looking around) remains,
-and a repeating task drives it via `Mob.Pathfinder#moveTo(...)` from
-waypoint to waypoint. If `duck.ai-enabled: false`, `setAI(false)` is used
-instead and the duck simply stands still, regardless of any configured
-path.
+default vanilla behaviour (attacking, wandering, looking around) remains,
+and a repeating task drives it via `Mob.Pathfinder#moveTo(...)` — at its
+own rolled speed — from waypoint to waypoint. If `duck.ai-enabled: false`,
+`setAI(false)` is used instead and the duck simply stands still,
+regardless of any configured path. Zombie-family mobs (`Zombie`, `Husk`,
+`Drowned`, ...) also get `setShouldBurnInDay(false)` so they don't catch
+fire; other mob families keep their vanilla daylight behaviour.
 
 Ducks are spawned with `clearLootTable()` and the death listener clears
 the event's drops/experience as a second safeguard, so killing a duck
 never drops items or grants XP. Its spawn point's capacity is freed up
-via a `PersistentDataContainer` tag read on death.
+via a `PersistentDataContainer` tag read on death; the same mechanism
+stores each duck's rolled speed, which is what determines its point
+value (see [Leaderboard](#leaderboard) above).

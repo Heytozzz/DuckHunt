@@ -3,6 +3,13 @@ package dev.heytozzz.duckhunt.config;
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.spawn.PathMode;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Mob;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Loads settings from config.yml: duck stats, spawn defaults,
@@ -14,7 +21,9 @@ public class ConfigManager {
     private final DuckHuntPlugin plugin;
 
     private double duckHealth;
-    private double duckMovementSpeed;
+    private List<EntityType> duckTypes;
+    private double minDuckSpeed;
+    private double maxDuckSpeed;
     private boolean duckAiEnabled;
     private boolean duckSilent;
     private boolean duckGlowing;
@@ -29,6 +38,8 @@ public class ConfigManager {
 
     private double minKillDistance;
     private int leaderboardTopSize;
+    private int minDuckPoints;
+    private int maxDuckPoints;
 
     private boolean broadcastEnabled;
     private BroadcastMode broadcastMode;
@@ -47,7 +58,9 @@ public class ConfigManager {
         FileConfiguration config = plugin.getConfig();
 
         duckHealth = config.getDouble("duck.health", 2.0);
-        duckMovementSpeed = config.getDouble("duck.movement-speed", 0.23);
+        duckTypes = parseDuckTypes(config.getStringList("duck.types"));
+        minDuckSpeed = Math.max(0.0, config.getDouble("duck.speed.min", 0.15));
+        maxDuckSpeed = Math.max(minDuckSpeed, config.getDouble("duck.speed.max", 0.35));
         duckAiEnabled = config.getBoolean("duck.ai-enabled", false);
         duckSilent = config.getBoolean("duck.silent", true);
         duckGlowing = config.getBoolean("duck.glowing", false);
@@ -67,6 +80,8 @@ public class ConfigManager {
 
         minKillDistance = Math.max(0.0, config.getDouble("leaderboard.min-kill-distance", 10.0));
         leaderboardTopSize = Math.max(1, config.getInt("leaderboard.top-size", 10));
+        minDuckPoints = Math.max(0, config.getInt("leaderboard.min-points", 1));
+        maxDuckPoints = Math.max(minDuckPoints, config.getInt("leaderboard.max-points", 10));
 
         broadcastEnabled = config.getBoolean("kill-broadcast.enabled", true);
         broadcastMode = BroadcastMode.parse(config.getString("kill-broadcast.mode", "global"));
@@ -77,12 +92,69 @@ public class ConfigManager {
         broadcastRadius = Math.max(0.0, config.getDouble("kill-broadcast.radius", 100.0));
     }
 
+    /**
+     * Parses and validates "duck.types": each entry must be a real
+     * {@link EntityType} that maps to a {@link Mob} (so it supports AI,
+     * pathfinding, attributes, etc.). Unknown or non-mob entries are
+     * skipped with a warning; if nothing valid is left, falls back to a
+     * single-entry list of {@code ZOMBIE}.
+     */
+    private List<EntityType> parseDuckTypes(List<String> raw) {
+        List<EntityType> types = new ArrayList<>();
+        for (String name : raw) {
+            EntityType type = parseEntityType(name);
+            if (type == null) {
+                plugin.getLogger().warning("Unknown entity type '" + name + "' in 'duck.types', skipping.");
+                continue;
+            }
+            Class<?> entityClass = type.getEntityClass();
+            if (entityClass == null || !Mob.class.isAssignableFrom(entityClass)) {
+                plugin.getLogger().warning("Entity type '" + name + "' in 'duck.types' isn't a usable mob, skipping.");
+                continue;
+            }
+            types.add(type);
+        }
+        if (types.isEmpty()) {
+            plugin.getLogger().warning("No valid entries in 'duck.types', falling back to a single ZOMBIE.");
+            types.add(EntityType.ZOMBIE);
+        }
+        return types;
+    }
+
+    @Nullable
+    private EntityType parseEntityType(String raw) {
+        try {
+            return EntityType.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
     public double getDuckHealth() {
         return duckHealth;
     }
 
-    public double getDuckMovementSpeed() {
-        return duckMovementSpeed;
+    /**
+     * The pool of mob types a newly-spawned duck is randomly picked from
+     * (already validated: every entry is guaranteed to be a usable
+     * {@link Mob} type). Always has at least one entry.
+     */
+    public List<EntityType> getDuckTypes() {
+        return duckTypes;
+    }
+
+    /**
+     * Lower bound (inclusive) of a duck's randomly-rolled movement speed.
+     */
+    public double getMinDuckSpeed() {
+        return minDuckSpeed;
+    }
+
+    /**
+     * Upper bound (inclusive) of a duck's randomly-rolled movement speed.
+     */
+    public double getMaxDuckSpeed() {
+        return maxDuckSpeed;
     }
 
     /**
@@ -90,7 +162,7 @@ public class ConfigManager {
      * using real pathfinding AI. When false, ducks stay put at their
      * spawn point (their default vanilla goals are also left untouched
      * in that case, though {@code duck.ai-enabled: false} already keeps
-     * them passive via {@code Zombie#setAI(false)}).
+     * them passive via {@code Mob#setAI(false)}).
      */
     public boolean isDuckAiEnabled() {
         return duckAiEnabled;
@@ -159,6 +231,22 @@ public class ConfigManager {
      */
     public int getLeaderboardTopSize() {
         return leaderboardTopSize;
+    }
+
+    /**
+     * Converts a duck's rolled movement speed into leaderboard points:
+     * linearly interpolated between "leaderboard.min-points" (at
+     * "duck.speed.min") and "leaderboard.max-points" (at
+     * "duck.speed.max") — faster ducks are worth more. Speeds outside
+     * that range are clamped.
+     */
+    public int getPointsForSpeed(double speed) {
+        if (maxDuckSpeed <= minDuckSpeed) {
+            return minDuckPoints;
+        }
+        double fraction = (speed - minDuckSpeed) / (maxDuckSpeed - minDuckSpeed);
+        fraction = Math.max(0.0, Math.min(1.0, fraction));
+        return (int) Math.round(minDuckPoints + fraction * (maxDuckPoints - minDuckPoints));
     }
 
     public boolean isBroadcastEnabled() {

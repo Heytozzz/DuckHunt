@@ -182,6 +182,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             plugin.getLangManager().send(sender, "top.entry",
                     Placeholder.unparsed("rank", String.valueOf(i + 1)),
                     Placeholder.unparsed("player", entry.name()),
+                    Placeholder.unparsed("points", String.valueOf(entry.points())),
                     Placeholder.unparsed("kills", String.valueOf(entry.kills())));
         }
     }

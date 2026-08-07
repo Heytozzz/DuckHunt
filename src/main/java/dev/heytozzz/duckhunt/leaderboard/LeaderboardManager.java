@@ -56,37 +56,45 @@ public class LeaderboardManager {
                 }
                 String name = playerSection.getString("name", uuid.toString());
                 int kills = playerSection.getInt("kills", 0);
-                entries.put(uuid, new LeaderboardEntry(uuid, name, kills));
+                int points = playerSection.getInt("points", 0);
+                entries.put(uuid, new LeaderboardEntry(uuid, name, kills, points));
             }
         }
     }
 
     /**
-     * Adds one qualifying kill to a player's tally (creating their entry
-     * if this is their first) and persists it immediately. The stored
-     * display name is refreshed on every kill in case it changed.
+     * Adds one qualifying kill (worth {@code points}, based on how fast
+     * the duck was — see
+     * {@link dev.heytozzz.duckhunt.config.ConfigManager#getPointsForSpeed(double)})
+     * to a player's tally (creating their entry if this is their first)
+     * and persists it immediately. The stored display name is refreshed
+     * on every kill in case it changed.
      *
-     * @return the player's new total.
+     * @return the player's new point total.
      */
-    public int recordKill(Player player) {
+    public int recordKill(Player player, int points) {
         LeaderboardEntry existing = entries.get(player.getUniqueId());
         int kills = (existing != null ? existing.kills() : 0) + 1;
-        entries.put(player.getUniqueId(), new LeaderboardEntry(player.getUniqueId(), player.getName(), kills));
+        int totalPoints = (existing != null ? existing.points() : 0) + points;
+        entries.put(player.getUniqueId(),
+                new LeaderboardEntry(player.getUniqueId(), player.getName(), kills, totalPoints));
 
         String path = "players." + player.getUniqueId();
         storage.set(path + ".name", player.getName());
         storage.set(path + ".kills", kills);
+        storage.set(path + ".points", totalPoints);
         persist();
-        return kills;
+        return totalPoints;
     }
 
     /**
-     * The top entries, ordered by kills descending (ties broken
-     * alphabetically by name).
+     * The top entries, ordered by points descending (ties broken by kill
+     * count, then alphabetically by name).
      */
     public List<LeaderboardEntry> getTop(int limit) {
         return entries.values().stream()
-                .sorted(Comparator.comparingInt(LeaderboardEntry::kills).reversed()
+                .sorted(Comparator.comparingInt(LeaderboardEntry::points).reversed()
+                        .thenComparing(Comparator.comparingInt(LeaderboardEntry::kills).reversed())
                         .thenComparing(entry -> entry.name().toLowerCase(Locale.ROOT)))
                 .limit(limit)
                 .collect(Collectors.toList());

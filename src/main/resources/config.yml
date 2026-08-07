@@ -4,27 +4,43 @@
 # Spawn point locations and waypoint paths live in their own file:
 # spawnpoints.yml.
 
-# Stats applied to every zombie ("duck") that gets spawned.
+# Stats applied to every mob ("duck") that gets spawned.
 duck:
-  # Max health / current health of the zombie. Lower = dies in fewer hits.
-  health: 2.0
-  # Base movement speed attribute AND the speed used by the pathfinder
-  # when "ai-enabled" is true (see below). Typical walking speed is
-  # around 0.2-0.3.
-  movement-speed: 0.23
+  # Pool of mob types a duck is randomly picked from every time one is
+  # spawned. Must be valid Bukkit EntityType names that map to a mob
+  # (Zombie, Skeleton, Spider, Husk, Drowned, Rabbit, Chicken, Pig, Cow,
+  # Sheep, Villager, etc.). Unknown or non-mob entries are skipped with a
+  # warning at startup/reload; if nothing valid is left, falls back to a
+  # single ZOMBIE. Careful with mobs that explode or ranged-attack
+  # (Creeper, Skeleton archers with AI enabled) — they're allowed, but
+  # behave like their vanilla selves besides the changes below.
+  types: [ZOMBIE, HUSK, SKELETON, SPIDER, DROWNED]
+  # Max health / current health of the duck. Lower = dies in fewer hits.
+  health: 1.0
+  # Each duck's movement speed is randomly rolled in this range (applied
+  # as the movement_speed attribute AND the speed used by the pathfinder
+  # when "ai-enabled" is true, see below). Typical walking speed is
+  # around 0.2-0.3; faster ducks are also worth more leaderboard points
+  # (see "leaderboard.min-points"/"max-points" below).
+  speed:
+    min: 0.35
+    max: 0.55
   # Whether the duck actively patrols its spawn point's waypoint path
   # using real pathfinding AI (dodges obstacles, climbs stairs, etc.).
-  # - true:  the duck's default zombie AI (attacking, wandering...) is
+  # - true:  the duck's default vanilla AI (attacking, wandering...) is
   #          wiped, and it's driven only by its waypoint path instead.
   #          If a spawn point has no extra waypoints, it just stands at
   #          its spawn location.
   # - false: the duck has no AI at all and stays completely still,
   #          regardless of any configured path (legacy behaviour).
-  ai-enabled: false
-  # Whether the zombie is silent (no growl/hurt sounds).
+  ai-enabled: true
+  # Whether the duck is silent (no growl/hurt/hiss sounds).
   silent: true
-  # Whether the zombie glows (useful while testing spawn points/paths).
+  # Whether the duck glows (useful while testing spawn points/paths).
   glowing: false
+  # Ducks always have collisions with other entities disabled (not
+  # configurable) so a fast duck can freely overtake a slower one
+  # instead of pushing/bumping into it.
 
 spawn:
   # Default number of ducks kept alive at once per spawn point. Individual
@@ -34,7 +50,7 @@ spawn:
   # If true, the instant a duck dies, a replacement duck spawns right away
   # at the same point instead of waiting for the next auto-spawn cycle or
   # a manual "/duckhunt admin spawn".
-  instant-respawn: false
+  instant-respawn: true
   # What a duck does after reaching the last waypoint of its path.
   # Individual spawn points can override this in spawnpoints.yml (or via
   # "/duckhunt admin spawner <id> path mode <mode>").
@@ -50,7 +66,7 @@ spawn:
 # Automatic spawning: periodically re-fills every spawn point that's
 # below its configured amount.
 auto-spawn:
-  enabled: false
+  enabled: true
   interval-seconds: 20
 
 # Duck kill leaderboard ("/duckhunt top").
@@ -61,6 +77,12 @@ leaderboard:
   min-kill-distance: 10.0
   # How many entries "/duckhunt top" shows.
   top-size: 10
+  # Points awarded per qualifying kill, linearly scaled by how fast the
+  # duck was: a duck rolled at "duck.speed.min" is worth "min-points",
+  # one rolled at "duck.speed.max" is worth "max-points", and anything
+  # in between is interpolated.
+  min-points: 1
+  max-points: 3
 
 # Broadcasts a message whenever a duck is killed (independent from
 # whether that kill counted towards the leaderboard above).
@@ -68,5 +90,5 @@ kill-broadcast:
   enabled: true
   # global - sent to every online player.
   # radius - only sent to players within "radius" blocks of the kill.
-  mode: global
+  mode: radius
   radius: 100.0
