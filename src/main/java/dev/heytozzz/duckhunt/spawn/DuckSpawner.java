@@ -16,6 +16,8 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Zombie;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -37,6 +39,13 @@ import java.util.function.Consumer;
  * once, up to its configured capacity, all patrolling the same path.
  */
 public class DuckSpawner {
+
+    // Scoreboard team ducks are placed in purely so COLLISION_RULE can
+    // disable entity-to-entity pushing between them. Unlike
+    // Entity#setCollidable(false), a team collision rule only affects
+    // pushing — it doesn't make the duck invisible to projectiles, so
+    // arrows still register hits normally.
+    private static final String DUCK_TEAM_NAME = "duckhunt_ducks";
 
     private final DuckHuntPlugin plugin;
     private final ConfigManager config;
@@ -170,10 +179,11 @@ public class DuckSpawner {
 
     /**
      * Applies stats and behaviour to a duck: health, its rolled movement
-     * speed attribute, visibility flags, disabled collisions (so faster
-     * ducks can freely overtake slower ones instead of pushing into
-     * them), and (if path-following is enabled) wipes its default AI
-     * goals so nothing but our own waypoint task moves or targets it.
+     * speed attribute, visibility flags, disabled entity-to-entity
+     * collision (so faster ducks can freely overtake slower ones instead
+     * of pushing into them, without affecting projectile hits), and (if
+     * path-following is enabled) wipes its default AI goals so nothing
+     * but our own waypoint task moves or targets it.
      */
     private void applyDuckBehavior(Mob duck, double speed) {
         setAttribute(duck, "max_health", config.getDuckHealth());
@@ -182,9 +192,10 @@ public class DuckSpawner {
         duck.setSilent(config.isDuckSilent());
         duck.setGlowing(config.isDuckGlowing());
         duck.setCanPickupItems(false);
-        // Disables collision resolution with other entities so ducks
-        // never bump/push each other — faster ones simply pass through.
-        duck.setCollidable(false);
+        // Adds the duck to a team with COLLISION_RULE.NEVER instead of
+        // Entity#setCollidable(false): that method also makes the entity
+        // invisible to projectiles, which would stop arrows from hitting it.
+        ensureDuckTeam().addEntity(duck);
         // No loot table at all: the duck must never drop anything.
         duck.clearLootTable();
 
@@ -216,12 +227,36 @@ public class DuckSpawner {
     }
 
     /**
-     * Called when a duck dies. Frees up its spawn point slot and (if
-     * enabled) instantly spawns a replacement.
+     * Gets (creating if needed) the scoreboard team every duck is placed
+     * in to disable entity-to-entity collision between them via
+     * {@link Team.Option#COLLISION_RULE}. Teams registered through the
+     * API aren't persisted across restarts, so this is safe to call on
+     * every spawn/reconcile — it just recreates the team the first time
+     * it's needed each server run.
+     */
+    private Team ensureDuckTeam() {
+        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+        Team team = scoreboard.getTeam(DUCK_TEAM_NAME);
+        if (team == null) {
+            team = scoreboard.registerNewTeam(DUCK_TEAM_NAME);
+            team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        }
+        return team;
+    }
+
+    /**
+     * Called when a duck dies. Frees up its spawn point slot, removes it
+     * from the no-collision team, and (if enabled) instantly spawns a
+     * replacement.
      */
     public void handleDeath(Mob duck) {
         UUID duckId = duck.getUniqueId();
         pathStateByDuck.remove(duckId);
+
+        Team team = Bukkit.getScoreboardManager().getMainScoreboard().getTeam(DUCK_TEAM_NAME);
+        if (team != null) {
+            team.removeEntity(duck);
+        }
 
         String spawnId = duck.getPersistentDataContainer().get(DuckKeys.spawn(), PersistentDataType.STRING);
         if (spawnId == null) {

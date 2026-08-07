@@ -6,11 +6,11 @@
 
     <groupId>dev.heytozzz</groupId>
     <artifactId>DuckHunt</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>DuckHunt</name>
-    <description>Duck-hunting minigame plugin: zombies ("ducks") patrol a chain of waypoints using pathfinding AI.</description>
+    <description>Duck-hunting minigame plugin: random mobs ("ducks") patrol a chain of waypoints using pathfinding AI.</description>
     <url>https://github.com/Heytozzz/DuckHunt</url>
 
     <properties>

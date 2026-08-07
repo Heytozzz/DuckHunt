@@ -4,7 +4,7 @@ main: dev.heytozzz.duckhunt.DuckHuntPlugin
 api-version: '26.2'
 author: Heytozzz
 description: >-
-  A duck-hunting minigame where "ducks" are zombies that patrol a chain of
+  A duck-hunting minigame where "ducks" are random mobs that patrol a chain of
   waypoints using real pathfinding AI.
 website: https://github.com/Heytozzz/DuckHunt
 load: POSTWORLD
