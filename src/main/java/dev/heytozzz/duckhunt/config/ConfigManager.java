@@ -56,6 +56,7 @@ public class ConfigManager {
 
     private Set<Integer> eventMilestoneSeconds;
     private boolean eventWinnerTitleEnabled;
+    private List<String> eventWinnerRewardCommands;
     private EventScope eventStartScope;
     private EventScope eventCountdownScope;
     private EventScope eventWinnerScope;
@@ -120,6 +121,7 @@ public class ConfigManager {
             eventMilestoneSeconds = Set.of(60, 30, 5, 4, 3, 2, 1);
         }
         eventWinnerTitleEnabled = config.getBoolean("event.winner-title-enabled", true);
+        eventWinnerRewardCommands = config.getStringList("event.winner-rewards");
 
         EventScope globalFallback = new EventScope(BroadcastMode.GLOBAL, 50.0, List.of());
         eventStartScope = EventScopeConfig.parse(
@@ -364,6 +366,16 @@ public class ConfigManager {
      */
     public boolean isEventWinnerTitleEnabled() {
         return eventWinnerTitleEnabled;
+    }
+
+    /**
+     * Console command templates run once per winner when an event ends
+     * (skipped entirely if nobody scored any points). Each template can
+     * use %player% (the winner's name), %points% (their winning score),
+     * %id% (the spawn point id) and %name% (the event's name).
+     */
+    public List<String> getEventWinnerRewardCommands() {
+        return eventWinnerRewardCommands;
     }
 
     /**

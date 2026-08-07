@@ -4,6 +4,7 @@ import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.spawn.SpawnPoint;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -182,9 +183,40 @@ public class EventManager {
                         Placeholder.unparsed("winner", winnerNames),
                         Placeholder.unparsed("points", String.valueOf(winners.get(0).points())));
             }
+
+            rewardWinners(session, winners);
         }
 
         historyStore.record(session);
+    }
+
+    /**
+     * Runs every configured "event.winner-rewards" console command once
+     * for each tied winner (skipped entirely if the list is empty), then
+     * lets each winner know if they're currently online.
+     */
+    private void rewardWinners(EventSession session, List<EventScore> winners) {
+        List<String> commandTemplates = plugin.getConfigManager().getEventWinnerRewardCommands();
+        if (commandTemplates.isEmpty()) {
+            return;
+        }
+
+        for (EventScore winner : winners) {
+            for (String template : commandTemplates) {
+                String command = template
+                        .replace("%player%", winner.name())
+                        .replace("%points%", String.valueOf(winner.points()))
+                        .replace("%id%", session.getSpawnerId())
+                        .replace("%name%", session.getName());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+            }
+
+            Player onlineWinner = Bukkit.getPlayer(winner.uuid());
+            if (onlineWinner != null) {
+                plugin.getLangManager().send(onlineWinner, "event.reward-received",
+                        Placeholder.unparsed("name", session.getName()));
+            }
+        }
     }
 
     /**

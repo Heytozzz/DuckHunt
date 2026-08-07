@@ -140,6 +140,17 @@ event:
   # Whether the winner announcement also pops up as a title, in addition
   # to the chat message.
   winner-title-enabled: true
+  # Console commands run once per winner when an event ends (skipped
+  # entirely if nobody scored any points, and left empty by default so
+  # nothing runs until you configure it). Works with whatever economy/
+  # reward plugin you already have — this just runs its command.
+  # Placeholders: %player% (winner's name), %points% (their winning
+  # score), %id% (spawn point id), %name% (event name).
+  winner-rewards: []
+  # Examples (uncomment/adapt to whatever plugin you use):
+  #  - "eco give %player% 500"
+  #  - "give %player% diamond 3"
+  #  - "lp user %player% permission settemp duckhunt.champion true 1d"
 
   # Announced once when the event starts.
   start:

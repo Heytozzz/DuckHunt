@@ -66,6 +66,7 @@ event:
   no-winner: "<gradient:#FBDA00:#A89200><bold>EVENTO</bold></gradient> <gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> terminó — nadie hizo puntos.</gradient>"
   winner-title-main: "<gradient:#FBDA00:#A89200><bold><name></bold></gradient>"
   winner-title-sub: "<gradient:#FBDA00:#A89200><winner></gradient><gradient:#B3B3B3:#696969> gana con </gradient><gradient:#FBDA00:#A89200><points></gradient><gradient:#B3B3B3:#696969> punto(s)!</gradient>"
+  reward-received: "<gradient:#B3B3B3:#696969>¡Recibiste tu recompensa por ganar </gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969>!</gradient>"
   already-active: "<gradient:#B3B3B3:#696969>El punto de aparición </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> ya tiene un evento activo.</gradient>"
   not-active: "<gradient:#B3B3B3:#696969>El punto de aparición </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> no tiene un evento activo.</gradient>"
   start-confirm: "<gradient:#B3B3B3:#696969>Evento </gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> iniciado en </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> por </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969>.</gradient>"
