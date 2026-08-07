@@ -118,12 +118,16 @@ public class DuckSpawner {
         }
         double pointsMultiplier = rare ? config.getRarePointsMultiplier() : 1.0;
 
+        // "speed" above is reassigned when rare, so it isn't effectively
+        // final; capture a final copy for the spawn lambda instead.
+        double finalSpeed = speed;
+
         Mob duck = spawnMob(location, mobClass, entity -> {
             entity.setPersistent(true);
             entity.setRemoveWhenFarAway(false);
             entity.addScoreboardTag(DuckKeys.TAG_DUCK);
             entity.getPersistentDataContainer().set(DuckKeys.spawn(), PersistentDataType.STRING, point.id());
-            entity.getPersistentDataContainer().set(DuckKeys.speed(), PersistentDataType.DOUBLE, speed);
+            entity.getPersistentDataContainer().set(DuckKeys.speed(), PersistentDataType.DOUBLE, finalSpeed);
             entity.getPersistentDataContainer()
                     .set(DuckKeys.pointsMultiplier(), PersistentDataType.DOUBLE, pointsMultiplier);
         });
