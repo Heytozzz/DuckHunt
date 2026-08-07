@@ -3,6 +3,8 @@ package dev.heytozzz.duckhunt.config;
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.effect.EffectConfig;
 import dev.heytozzz.duckhunt.effect.EffectSet;
+import dev.heytozzz.duckhunt.event.EventScope;
+import dev.heytozzz.duckhunt.event.EventScopeConfig;
 import dev.heytozzz.duckhunt.spawn.PathMode;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
@@ -10,8 +12,10 @@ import org.bukkit.entity.Mob;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Loads settings from config.yml: duck stats, spawn defaults,
@@ -49,6 +53,12 @@ public class ConfigManager {
 
     private EffectSet defaultSpawnEffects;
     private EffectSet defaultDeathEffects;
+
+    private Set<Integer> eventMilestoneSeconds;
+    private boolean eventWinnerTitleEnabled;
+    private EventScope eventStartScope;
+    private EventScope eventCountdownScope;
+    private EventScope eventWinnerScope;
 
     public ConfigManager(DuckHuntPlugin plugin) {
         this.plugin = plugin;
@@ -104,6 +114,20 @@ public class ConfigManager {
         if (defaultDeathEffects == null) {
             defaultDeathEffects = EffectSet.EMPTY;
         }
+
+        eventMilestoneSeconds = new LinkedHashSet<>(config.getIntegerList("event.milestone-seconds"));
+        if (eventMilestoneSeconds.isEmpty()) {
+            eventMilestoneSeconds = Set.of(60, 30, 5, 4, 3, 2, 1);
+        }
+        eventWinnerTitleEnabled = config.getBoolean("event.winner-title-enabled", true);
+
+        EventScope globalFallback = new EventScope(BroadcastMode.GLOBAL, 50.0, List.of());
+        eventStartScope = EventScopeConfig.parse(
+                config.getConfigurationSection("event.start"), "event.start", globalFallback, plugin.getLogger());
+        eventCountdownScope = EventScopeConfig.parse(
+                config.getConfigurationSection("event.countdown"), "event.countdown", globalFallback, plugin.getLogger());
+        eventWinnerScope = EventScopeConfig.parse(
+                config.getConfigurationSection("event.winner"), "event.winner", globalFallback, plugin.getLogger());
     }
 
     /**
@@ -324,5 +348,44 @@ public class ConfigManager {
      */
     public EffectSet getDefaultDeathEffects() {
         return defaultDeathEffects;
+    }
+
+    /**
+     * Seconds remaining at which the countdown announces a milestone in
+     * chat (e.g. {1, 2, 3, 4, 5, 30, 60}).
+     */
+    public Set<Integer> getEventMilestoneSeconds() {
+        return eventMilestoneSeconds;
+    }
+
+    /**
+     * Whether an event's winner announcement is also shown as a title,
+     * on top of the chat message.
+     */
+    public boolean isEventWinnerTitleEnabled() {
+        return eventWinnerTitleEnabled;
+    }
+
+    /**
+     * Who receives an event's start announcement.
+     */
+    public EventScope getEventStartScope() {
+        return eventStartScope;
+    }
+
+    /**
+     * Who receives an event's countdown (the action bar timer and the
+     * milestone chat announcements).
+     */
+    public EventScope getEventCountdownScope() {
+        return eventCountdownScope;
+    }
+
+    /**
+     * Who receives an event's winner announcement (chat, and title if
+     * {@link #isEventWinnerTitleEnabled()}).
+     */
+    public EventScope getEventWinnerScope() {
+        return eventWinnerScope;
     }
 }

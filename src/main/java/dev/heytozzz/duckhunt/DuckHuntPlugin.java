@@ -3,6 +3,7 @@ package dev.heytozzz.duckhunt;
 import dev.heytozzz.duckhunt.command.DuckHuntCommand;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.config.SpawnPointManager;
+import dev.heytozzz.duckhunt.event.EventManager;
 import dev.heytozzz.duckhunt.lang.LangManager;
 import dev.heytozzz.duckhunt.leaderboard.LeaderboardManager;
 import dev.heytozzz.duckhunt.listener.DuckDeathListener;
@@ -20,6 +21,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
     private DuckSpawner duckSpawner;
     private AutoSpawnManager autoSpawnManager;
     private LeaderboardManager leaderboardManager;
+    private EventManager eventManager;
 
     @Override
     public void onEnable() {
@@ -36,6 +38,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
         this.leaderboardManager = new LeaderboardManager(this);
         this.leaderboardManager.load();
+
+        this.eventManager = new EventManager(this);
+        this.eventManager.load();
 
         this.duckSpawner = new DuckSpawner(this);
         this.duckSpawner.reconcileFromWorld();
@@ -56,6 +61,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
         }
 
         duckSpawner.startPathFollowing();
+        eventManager.start();
 
         getLogger().info("DuckHunt enabled.");
     }
@@ -67,6 +73,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
         }
         if (duckSpawner != null) {
             duckSpawner.stopPathFollowing();
+        }
+        if (eventManager != null) {
+            eventManager.stop();
         }
         getLogger().info("DuckHunt disabled.");
     }
@@ -93,5 +102,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
     public LeaderboardManager getLeaderboardManager() {
         return leaderboardManager;
+    }
+
+    public EventManager getEventManager() {
+        return eventManager;
     }
 }

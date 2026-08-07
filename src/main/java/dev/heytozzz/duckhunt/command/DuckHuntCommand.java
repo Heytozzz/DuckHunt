@@ -1,6 +1,9 @@
 package dev.heytozzz.duckhunt.command;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.event.DurationParser;
+import dev.heytozzz.duckhunt.event.EventManager;
+import dev.heytozzz.duckhunt.event.EventSession;
 import dev.heytozzz.duckhunt.leaderboard.LeaderboardEntry;
 import dev.heytozzz.duckhunt.spawn.PathMode;
 import dev.heytozzz.duckhunt.spawn.SpawnPoint;
@@ -32,7 +35,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of("top", "admin");
     private static final List<String> ADMIN_ACTIONS = List.of(
-            "spawner", "spawn", "clear", "start", "stop", "reload", "top", "settings"
+            "spawner", "spawn", "clear", "start", "stop", "reload", "top", "settings", "event"
     );
     private static final List<String> SPAWNER_ACTIONS = List.of("list", "create", "remove");
     private static final List<String> SPAWNER_ID_ACTIONS = List.of("max", "path");
@@ -41,6 +44,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
     private static final List<String> TOP_ACTIONS = List.of("reset");
     private static final List<String> SETTINGS_ACTIONS = List.of("broadcast");
     private static final List<String> BROADCAST_MODES = List.of("global", "radius");
+    private static final List<String> EVENT_ACTIONS = List.of("start", "stop", "list");
 
     private final DuckHuntPlugin plugin;
 
@@ -103,6 +107,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReload(sender);
             case "top" -> handleAdminTop(sender, rest);
             case "settings" -> handleAdminSettings(sender, rest);
+            case "event" -> handleEvent(sender, rest);
             default -> plugin.getLangManager().send(sender, "usage.admin");
         }
     }
@@ -165,6 +170,83 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
                         Placeholder.unparsed("radius", String.valueOf(radius)));
             }
             default -> plugin.getLangManager().send(sender, "usage.admin-settings");
+        }
+    }
+
+    /**
+     * Dispatches "/duckhunt admin event ...".
+     */
+    private void handleEvent(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            plugin.getLangManager().send(sender, "usage.event");
+            return;
+        }
+
+        String action = args[1].toLowerCase(Locale.ROOT);
+        switch (action) {
+            case "start" -> handleEventStart(sender, args);
+            case "stop" -> handleEventStop(sender, args);
+            case "list" -> handleEventList(sender);
+            default -> plugin.getLangManager().send(sender, "usage.event");
+        }
+    }
+
+    private void handleEventStart(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            plugin.getLangManager().send(sender, "usage.event-start");
+            return;
+        }
+
+        String spawnerId = args[2];
+        Long seconds = DurationParser.parseSeconds(args[3]);
+        if (seconds == null) {
+            plugin.getLangManager().send(sender, "error.invalid-duration");
+            return;
+        }
+        // Everything after the duration is the (optional) event name,
+        // joined back with spaces; defaults to the spawner's own id.
+        String name = args.length > 4 ? String.join(" ", Arrays.copyOfRange(args, 4, args.length)) : spawnerId;
+
+        EventManager.StartResult result = plugin.getEventManager().startEvent(spawnerId, name, seconds.intValue());
+        switch (result) {
+            case SPAWNER_NOT_FOUND ->
+                    plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", spawnerId));
+            case ALREADY_ACTIVE ->
+                    plugin.getLangManager().send(sender, "event.already-active", Placeholder.unparsed("id", spawnerId));
+            case STARTED -> plugin.getLangManager().send(sender, "event.start-confirm",
+                    Placeholder.unparsed("id", spawnerId),
+                    Placeholder.unparsed("name", name),
+                    Placeholder.unparsed("time", EventManager.formatClock(seconds.intValue())));
+        }
+    }
+
+    private void handleEventStop(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            plugin.getLangManager().send(sender, "usage.event-stop");
+            return;
+        }
+
+        String spawnerId = args[2];
+        if (plugin.getEventManager().stopEvent(spawnerId)) {
+            plugin.getLangManager().send(sender, "event.stopped", Placeholder.unparsed("id", spawnerId));
+        } else {
+            plugin.getLangManager().send(sender, "event.not-active", Placeholder.unparsed("id", spawnerId));
+        }
+    }
+
+    private void handleEventList(CommandSender sender) {
+        var sessions = plugin.getEventManager().getActiveEvents();
+        if (sessions.isEmpty()) {
+            plugin.getLangManager().send(sender, "event.list-empty");
+            return;
+        }
+
+        plugin.getLangManager().send(sender, "event.list-header");
+        for (EventSession session : sessions) {
+            plugin.getLangManager().send(sender, "event.list-entry",
+                    Placeholder.unparsed("id", session.getSpawnerId()),
+                    Placeholder.unparsed("name", session.getName()),
+                    Placeholder.unparsed("time", EventManager.formatClock(session.getRemainingSeconds())));
         }
     }
 
@@ -395,6 +477,7 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
         plugin.getSpawnPointManager().load();
         plugin.getLangManager().load();
         plugin.getLeaderboardManager().load();
+        plugin.getEventManager().load();
         // Restart the path-following task so a changed
         // "spawn.path-check-interval-ticks" takes effect immediately.
         plugin.getDuckSpawner().stopPathFollowing();
@@ -595,6 +678,23 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
                 String partial = args[2].toLowerCase(Locale.ROOT);
                 return BROADCAST_MODES.stream()
                         .filter(name -> name.startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+            return List.of();
+        }
+
+        if (action.equals("event")) {
+            Set<String> spawnerIds = plugin.getSpawnPointManager().getSpawnPoints().keySet();
+            if (args.length == 2) {
+                String partial = args[1].toLowerCase(Locale.ROOT);
+                return EVENT_ACTIONS.stream()
+                        .filter(name -> name.startsWith(partial))
+                        .collect(Collectors.toList());
+            }
+            if (args.length == 3 && (args[1].equalsIgnoreCase("start") || args[1].equalsIgnoreCase("stop"))) {
+                String partial = args[2].toLowerCase(Locale.ROOT);
+                return spawnerIds.stream()
+                        .filter(id -> id.toLowerCase(Locale.ROOT).startsWith(partial))
                         .collect(Collectors.toList());
             }
             return List.of();

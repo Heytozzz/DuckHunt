@@ -5,14 +5,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Locale;
 
 /**
- * How a duck-kill message is broadcast to players.
+ * How a message (a duck-kill, or an event announcement) is broadcast to
+ * players.
  */
 public enum BroadcastMode {
 
     /** Sent to every online player, regardless of distance. */
     GLOBAL,
-    /** Only sent to players within a configurable radius of the kill. */
-    RADIUS;
+    /** Only sent to players within a configurable radius of a point. */
+    RADIUS,
+    /** Only sent to players currently in one of a configurable list of worlds. */
+    WORLD;
 
     /**
      * Parses a config/command value like "global" or "Radius".

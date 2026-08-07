@@ -21,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
  * Listens for duck deaths, frees up its spawn point's capacity, plays its
  * elimination sound/particle effects, records a leaderboard kill (if the
  * killer was far enough away) worth points based on how fast the duck
- * was, and (if enabled) broadcasts the kill.
+ * was, feeds those same points into that spawn point's active event (if
+ * any), and (if enabled) broadcasts the kill.
  */
 public class DuckDeathListener implements Listener {
 
@@ -63,6 +64,10 @@ public class DuckDeathListener implements Listener {
                 plugin.getLangManager().send(killer, "top.points-earned",
                         Placeholder.unparsed("points", String.valueOf(points)),
                         Placeholder.unparsed("total", String.valueOf(total)));
+
+                if (spawnId != null) {
+                    plugin.getEventManager().addPoints(spawnId, killer, points);
+                }
             }
 
             if (plugin.getConfigManager().isBroadcastEnabled()) {

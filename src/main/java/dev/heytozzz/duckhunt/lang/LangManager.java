@@ -1,9 +1,11 @@
 package dev.heytozzz.duckhunt.lang;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.event.EventScope;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -13,7 +15,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -129,6 +134,20 @@ public class LangManager {
     }
 
     /**
+     * Renders a translated message for the given recipient without the
+     * "[DuckHunt]" prefix — used for action bars and titles, where the
+     * prefix would just be visual noise.
+     */
+    public Component renderRaw(CommandSender sender, String key, TagResolver... placeholders) {
+        YamlConfiguration config = configFor(sender);
+        String raw = config != null ? config.getString(key) : null;
+        if (raw == null) {
+            raw = key;
+        }
+        return miniMessage.deserialize(raw, placeholders);
+    }
+
+    /**
      * Renders and sends a translated message to every online player within
      * {@code radius} blocks of {@code origin} (same world only), plus the
      * console. Used for the "radius" kill-broadcast mode.
@@ -146,5 +165,90 @@ public class LangManager {
         }
         CommandSender console = plugin.getServer().getConsoleSender();
         console.sendMessage(render(console, key, placeholders));
+    }
+
+    /**
+     * Renders and sends a translated message to every online player
+     * currently in one of {@code worldNames}, plus the console.
+     */
+    public void broadcastToWorlds(List<String> worldNames, String key, TagResolver... placeholders) {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            if (!worldNames.contains(player.getWorld().getName())) {
+                continue;
+            }
+            player.sendMessage(render(player, key, placeholders));
+        }
+        CommandSender console = plugin.getServer().getConsoleSender();
+        console.sendMessage(render(console, key, placeholders));
+    }
+
+    /**
+     * Renders and sends a translated chat message according to an
+     * {@link EventScope}: to everyone (global), to players near
+     * {@code origin} (radius), or to players in specific worlds (world).
+     * Falls back to global if {@code origin} is null and the scope is
+     * "radius" (e.g. the event's spawn point world got unloaded).
+     */
+    public void broadcastScoped(EventScope scope, Location origin, String key, TagResolver... placeholders) {
+        switch (scope.mode()) {
+            case RADIUS -> {
+                if (origin != null) {
+                    broadcastNear(origin, scope.radius(), key, placeholders);
+                } else {
+                    broadcast(key, placeholders);
+                }
+            }
+            case WORLD -> broadcastToWorlds(scope.worlds(), key, placeholders);
+            default -> broadcast(key, placeholders);
+        }
+    }
+
+    /**
+     * Sends an un-prefixed action bar to a single player.
+     */
+    public void sendActionBar(Player player, String key, TagResolver... placeholders) {
+        player.sendActionBar(renderRaw(player, key, placeholders));
+    }
+
+    /**
+     * Sends an action bar to every player in scope of an
+     * {@link EventScope} (see {@link #broadcastScoped}). Action bars
+     * can't be shown to the console, so it's skipped here.
+     */
+    public void actionBarScoped(EventScope scope, Location origin, String key, TagResolver... placeholders) {
+        for (Player player : playersInScope(scope, origin)) {
+            player.sendActionBar(renderRaw(player, key, placeholders));
+        }
+    }
+
+    /**
+     * Shows a title (with a short default fade-in/stay/fade-out) to
+     * every player in scope of an {@link EventScope}.
+     */
+    public void titleScoped(EventScope scope, Location origin, String mainKey, String subKey,
+                             TagResolver... placeholders) {
+        Title.Times times = Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(3), Duration.ofMillis(500));
+        for (Player player : playersInScope(scope, origin)) {
+            Component main = renderRaw(player, mainKey, placeholders);
+            Component sub = renderRaw(player, subKey, placeholders);
+            player.showTitle(Title.title(main, sub, times));
+        }
+    }
+
+    private List<Player> playersInScope(EventScope scope, Location origin) {
+        List<Player> result = new ArrayList<>();
+        double radiusSquared = scope.radius() * scope.radius();
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            boolean inScope = switch (scope.mode()) {
+                case RADIUS -> origin != null && player.getWorld().equals(origin.getWorld())
+                        && player.getLocation().distanceSquared(origin) <= radiusSquared;
+                case WORLD -> scope.worlds().contains(player.getWorld().getName());
+                default -> true;
+            };
+            if (inScope) {
+                result.add(player);
+            }
+        }
+        return result;
     }
 }

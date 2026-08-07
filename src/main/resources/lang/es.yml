@@ -58,9 +58,25 @@ path:
   list-entry: "<gray> - <yellow>#<index></yellow> <dark_gray>(<x>, <y>, <z>)</dark_gray>"
   list-empty: "<yellow>El punto de aparición <yellow><id></yellow> todavía no tiene waypoints. Usa /duckhunt admin spawner <id> path add.</yellow>"
 
+event:
+  announce-start: "<gold><bold>EVENTO</bold></gold> ¡<yellow><name></yellow> acaba de empezar en <yellow><id></yellow>! Tienes <yellow><time></yellow> para hacer la mayor cantidad de puntos."
+  actionbar: "<yellow><time></yellow>"
+  milestone: "<gold><name></gold> ¡<yellow><seconds></yellow> segundo(s) restante(s)!"
+  announce-winner: "<gold><bold>EVENTO</bold></gold> ¡<yellow><name></yellow> terminó! <yellow><winner></yellow> gana con <yellow><points></yellow> punto(s)!"
+  no-winner: "<gold><bold>EVENTO</bold></gold> <yellow><name></yellow> terminó — nadie hizo puntos."
+  winner-title-main: "<gold><bold><name></bold></gold>"
+  winner-title-sub: "<yellow><winner></yellow> gana con <points> punto(s)!"
+  already-active: "<red>El punto de aparición <yellow><id></yellow> ya tiene un evento activo.</red>"
+  not-active: "<yellow>El punto de aparición <yellow><id></yellow> no tiene un evento activo.</yellow>"
+  start-confirm: "<green>Evento <yellow><name></yellow> iniciado en <yellow><id></yellow> por <yellow><time></yellow>.</green>"
+  stopped: "<green>Se terminó el evento de <yellow><id></yellow>.</green>"
+  list-header: "<green>Eventos activos:</green>"
+  list-entry: "<gray> - <yellow><id></yellow> <dark_gray>(<name>)</dark_gray> <yellow><time></yellow> restante"
+  list-empty: "<yellow>No hay eventos activos en este momento.</yellow>"
+
 usage:
   main: "<yellow>Uso: /duckhunt [top|admin]</yellow>"
-  admin: "<yellow>Uso: /duckhunt admin [spawner|spawn|clear|start|stop|reload|top|settings]</yellow>"
+  admin: "<yellow>Uso: /duckhunt admin [spawner|spawn|clear|start|stop|reload|top|settings|event]</yellow>"
   spawner: "<yellow>Uso: /duckhunt admin spawner [list|create|remove|id] ...</yellow>"
   spawner-create: "<yellow>Uso: /duckhunt admin spawner create [id] [amount]</yellow>"
   spawner-remove: "<yellow>Uso: /duckhunt admin spawner remove [id]</yellow>"
@@ -69,9 +85,13 @@ usage:
   path: "<yellow>Uso: /duckhunt admin spawner [id] path [add|list|remove|clear|mode] [índice|modo]</yellow>"
   admin-top: "<yellow>Uso: /duckhunt admin top reset [jugador|all]</yellow>"
   admin-settings: "<yellow>Uso: /duckhunt admin settings broadcast [global|radius <bloques>]</yellow>"
+  event: "<yellow>Uso: /duckhunt admin event [start|stop|list] ...</yellow>"
+  event-start: "<yellow>Uso: /duckhunt admin event start [spawner] [duración] [nombre]</yellow>"
+  event-stop: "<yellow>Uso: /duckhunt admin event stop [spawner]</yellow>"
 
 error:
   players-only: "<red>Este comando solo puede usarse en el juego.</red>"
   unknown-subcommand: "<red>Subcomando desconocido.</red>"
   invalid-amount: "<red>La cantidad debe ser un número entero de 1 o más.</red>"
   invalid-path-mode: "<red>Modo de camino inválido. Usa loop, pingpong o stop.</red>"
+  invalid-duration: "<red>Duración inválida. Usa una combinación como 10m, 90s o 1h30m.</red>"
