@@ -105,7 +105,7 @@ spawn:
 # Automatic spawning: periodically re-fills every spawn point that's
 # below its configured amount.
 auto-spawn:
-  enabled: true
+  enabled: false
   interval-seconds: 3
 
 # Duck kill leaderboard ("/duckhunt top").
@@ -157,11 +157,18 @@ combo:
   tiers:
     - combo: 5
       points-multiplier: 1.2
+      particle:
+        particle: happy_villager
+        count: 4
+        offset-x: 0.06
+        offset-y: 0.06
+        offset-z: 0.06
+        speed: 0.0
     - combo: 10
       points-multiplier: 1.5
       particle:
         particle: flame
-        count: 3
+        count: 8
         offset-x: 0.06
         offset-y: 0.06
         offset-z: 0.06
@@ -170,7 +177,7 @@ combo:
       points-multiplier: 2.0
       particle:
         particle: end_rod
-        count: 4
+        count: 8
         offset-x: 0.08
         offset-y: 0.08
         offset-z: 0.08
@@ -244,7 +251,7 @@ effects:
         volume: 30.0
         pitch: 1.5
     particles:
-      - particle: happy.villager
+      - particle: happy_villager
         count: 5
   death:
     sounds:
@@ -274,8 +281,13 @@ event:
   # chat (e.g. "5 seconds left!"). Doesn't have to be sorted.
   milestone-seconds: [60, 30, 5, 4, 3, 2, 1]
   # Whether the winner announcement also pops up as a title, in addition
-  # to the chat message.
+  # to the chat message. When there's more than one winner, titles are
+  # revealed one at a time, starting from last place and counting down
+  # to the winner (see "winner-reveal-interval-ticks" below).
   winner-title-enabled: true
+  # Ticks (20 = 1 second) between each placement's title reveal when
+  # winner-title-enabled is true and there's more than one winner.
+  winner-reveal-interval-ticks: 30
   # How many top-scoring players are declared winners when an event
   # ends, unless a different amount is given as the last argument of
   # "/duckhunt admin event start <spawner> <duration> [name] [winners]".

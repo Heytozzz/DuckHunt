@@ -4,18 +4,20 @@ import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.spawn.SpawnPoint;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Runs timed "duck hunt" events: whoever scores the most points at a
@@ -175,30 +177,87 @@ public class EventManager {
         EventScope winnerScope = config.getEventWinnerScope();
 
         if (winners.isEmpty()) {
-            plugin.getLangManager().broadcastScoped(winnerScope, session.getOrigin(), "event.no-winner",
+            plugin.getLangManager().broadcastScopedCentered(winnerScope, session.getOrigin(), "event.no-winner",
                     Placeholder.unparsed("id", session.getSpawnerId()),
                     Placeholder.unparsed("name", session.getName()));
         } else {
-            String winnerNames = winners.stream().map(EventScore::name).collect(Collectors.joining(", "));
-            plugin.getLangManager().broadcastScoped(winnerScope, session.getOrigin(), "event.announce-winner",
+            plugin.getLangManager().broadcastScopedCentered(winnerScope, session.getOrigin(), "event.announce-winner",
                     Placeholder.unparsed("id", session.getSpawnerId()),
-                    Placeholder.unparsed("name", session.getName()),
-                    Placeholder.unparsed("winner", winnerNames),
-                    Placeholder.unparsed("points", String.valueOf(winners.get(0).points())));
+                    Placeholder.unparsed("name", session.getName()));
+
+            plugin.getLangManager().broadcastScopedCentered(winnerScope, session.getOrigin(), "event.winner-list-title");
+
+            for (int i = 0; i < winners.size(); i++) {
+                EventScore winner = winners.get(i);
+                int rank = i + 1;
+                plugin.getLangManager().broadcastScopedCentered(winnerScope, session.getOrigin(), "event.winner-list-entry",
+                        Placeholder.unparsed("rank", String.valueOf(rank)),
+                        Placeholder.unparsed("player", winner.name()),
+                        Placeholder.unparsed("points", String.valueOf(winner.points())));
+            }
 
             if (config.isEventWinnerTitleEnabled()) {
-                plugin.getLangManager().titleScoped(winnerScope, session.getOrigin(),
-                        "event.winner-title-main", "event.winner-title-sub",
-                        Placeholder.unparsed("id", session.getSpawnerId()),
-                        Placeholder.unparsed("name", session.getName()),
-                        Placeholder.unparsed("winner", winnerNames),
-                        Placeholder.unparsed("points", String.valueOf(winners.get(0).points())));
+                revealWinnerTitles(session, winners, winnerScope);
             }
 
             rewardWinners(session, winners);
         }
 
         historyStore.record(session);
+    }
+
+    /**
+     * Shows each winner's title one at a time, counting down from last
+     * place to first (so the winner is revealed last, as the "grand
+     * finale"). Ranks other than 1st use "event.winner-title-rank-main"
+     * /"-sub" with a shorter display; 1st place gets the classic
+     * "event.winner-title-main"/"-sub" with the default (longer) timing.
+     */
+    private void revealWinnerTitles(EventSession session, List<EventScore> winners, EventScope winnerScope) {
+        int intervalTicks = plugin.getConfigManager().getEventWinnerRevealIntervalTicks();
+        int steps = winners.size();
+
+        // Leave a little headroom so each intermediate title fully fades
+        // out before the next one replaces it.
+        int fadeInTicks = 2;
+        int fadeOutTicks = 4;
+        int stayTicks = Math.max(2, intervalTicks - fadeInTicks - fadeOutTicks);
+        Title.Times intermediateTimes = Title.Times.times(
+                ticks(fadeInTicks), ticks(stayTicks), ticks(fadeOutTicks));
+
+        for (int i = steps - 1; i >= 0; i--) {
+            EventScore winner = winners.get(i);
+            int rank = i + 1;
+            long delayTicks = (long) (steps - 1 - i) * intervalTicks;
+
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                boolean isTopWinner = rank == 1;
+                String mainKey = isTopWinner ? "event.winner-title-main" : "event.winner-title-rank-main";
+                String subKey = isTopWinner ? "event.winner-title-sub" : "event.winner-title-rank-sub";
+                Title.Times times = isTopWinner ? null : intermediateTimes;
+
+                TagResolver[] placeholders = {
+                        Placeholder.unparsed("id", session.getSpawnerId()),
+                        Placeholder.unparsed("name", session.getName()),
+                        Placeholder.unparsed("rank", String.valueOf(rank)),
+                        Placeholder.unparsed("player", winner.name()),
+                        Placeholder.unparsed("winner", winner.name()),
+                        Placeholder.unparsed("points", String.valueOf(winner.points()))
+                };
+
+                if (times != null) {
+                    plugin.getLangManager().titleScoped(winnerScope, session.getOrigin(), mainKey, subKey, times,
+                            placeholders);
+                } else {
+                    plugin.getLangManager().titleScoped(winnerScope, session.getOrigin(), mainKey, subKey,
+                            placeholders);
+                }
+            }, delayTicks);
+        }
+    }
+
+    private static Duration ticks(int ticks) {
+        return Duration.ofMillis(ticks * 50L);
     }
 
     /**

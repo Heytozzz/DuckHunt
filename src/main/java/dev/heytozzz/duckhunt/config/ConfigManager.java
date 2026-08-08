@@ -95,6 +95,7 @@ public class ConfigManager {
     private Set<Integer> eventMilestoneSeconds;
     private boolean eventWinnerTitleEnabled;
     private int defaultEventWinnerCount;
+    private int eventWinnerRevealIntervalTicks;
     // Keyed by 1-based placement ("1" = winner, "2" = runner-up, ...);
     // the special "default" key (stored under DEFAULT_RANK_KEY, index 0)
     // is the fallback for any placement without its own entry.
@@ -203,6 +204,7 @@ public class ConfigManager {
         }
         eventWinnerTitleEnabled = config.getBoolean("event.winner-title-enabled", true);
         defaultEventWinnerCount = Math.max(1, config.getInt("event.default-winner-count", 1));
+        eventWinnerRevealIntervalTicks = Math.max(5, config.getInt("event.winner-reveal-interval-ticks", 30));
         eventWinnerRewardCommandsByRank = parseWinnerRewardsByRank(config.getConfigurationSection("event.winner-rewards"));
 
         EventScope globalFallback = new EventScope(BroadcastMode.GLOBAL, 50.0, List.of());
@@ -808,6 +810,16 @@ public class ConfigManager {
      */
     public int getDefaultEventWinnerCount() {
         return defaultEventWinnerCount;
+    }
+
+    /**
+     * Ticks between each placement's title reveal when an event ends
+     * (last place shown first, counting down to the winner). Only
+     * matters when {@link #isEventWinnerTitleEnabled()} is true and
+     * there's more than one winner.
+     */
+    public int getEventWinnerRevealIntervalTicks() {
+        return eventWinnerRevealIntervalTicks;
     }
 
     /**
