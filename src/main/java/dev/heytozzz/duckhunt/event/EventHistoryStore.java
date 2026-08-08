@@ -51,10 +51,20 @@ public class EventHistoryStore {
         storage.set(key + ".started", session.getStartedAtMillis());
         storage.set(key + ".ended", System.currentTimeMillis());
         storage.set(key + ".duration-seconds", session.getTotalSeconds());
+        storage.set(key + ".winner-count", session.getWinnerCount());
 
         List<EventScore> winners = session.getWinners();
+        // Kept for backwards compatibility with anything reading the old
+        // fields (name list + the top score).
         storage.set(key + ".winners", winners.stream().map(EventScore::name).collect(Collectors.toList()));
         storage.set(key + ".winner-points", winners.isEmpty() ? 0 : winners.get(0).points());
+
+        for (int i = 0; i < winners.size(); i++) {
+            EventScore winner = winners.get(i);
+            String winnerPath = key + ".winners-ranked." + (i + 1);
+            storage.set(winnerPath + ".name", winner.name());
+            storage.set(winnerPath + ".points", winner.points());
+        }
 
         for (EventScore score : session.getScores().values()) {
             String scorePath = key + ".scores." + score.uuid();

@@ -69,9 +69,19 @@ public class EventManager {
     }
 
     /**
-     * Starts a new event at a spawn point.
+     * Starts a new event at a spawn point, using
+     * {@link dev.heytozzz.duckhunt.config.ConfigManager#getDefaultEventWinnerCount()}
+     * for how many top scorers will be declared winners.
      */
     public StartResult startEvent(String spawnerId, String name, int durationSeconds) {
+        return startEvent(spawnerId, name, durationSeconds, plugin.getConfigManager().getDefaultEventWinnerCount());
+    }
+
+    /**
+     * Starts a new event at a spawn point with an explicit number of
+     * winners (the top {@code winnerCount} scorers when it ends).
+     */
+    public StartResult startEvent(String spawnerId, String name, int durationSeconds, int winnerCount) {
         SpawnPoint point = plugin.getSpawnPointManager().get(spawnerId);
         if (point == null) {
             return StartResult.SPAWNER_NOT_FOUND;
@@ -81,14 +91,15 @@ public class EventManager {
         }
 
         Location origin = point.toLocation();
-        EventSession session = new EventSession(spawnerId, name, durationSeconds, origin);
+        EventSession session = new EventSession(spawnerId, name, durationSeconds, winnerCount, origin);
         activeEvents.put(spawnerId, session);
 
         ConfigManager config = plugin.getConfigManager();
         plugin.getLangManager().broadcastScoped(config.getEventStartScope(), origin, "event.announce-start",
                 Placeholder.unparsed("id", spawnerId),
                 Placeholder.unparsed("name", name),
-                Placeholder.unparsed("time", formatClock(durationSeconds)));
+                Placeholder.unparsed("time", formatClock(durationSeconds)),
+                Placeholder.unparsed("winners", String.valueOf(session.getWinnerCount())));
         return StartResult.STARTED;
     }
 
@@ -191,21 +202,26 @@ public class EventManager {
     }
 
     /**
-     * Runs every configured "event.winner-rewards" console command once
-     * for each tied winner (skipped entirely if the list is empty), then
-     * lets each winner know if they're currently online.
+     * Runs each winner's "event.winner-rewards" console commands, picked
+     * by their final placement (1st, 2nd, ...), falling back to the
+     * "default" entry. A placement with no commands configured (neither
+     * its own nor a "default") is skipped entirely — no commands run and
+     * no reward-received message is sent for that winner.
      */
     private void rewardWinners(EventSession session, List<EventScore> winners) {
-        List<String> commandTemplates = plugin.getConfigManager().getEventWinnerRewardCommands();
-        if (commandTemplates.isEmpty()) {
-            return;
-        }
+        for (int i = 0; i < winners.size(); i++) {
+            EventScore winner = winners.get(i);
+            int rank = i + 1;
+            List<String> commandTemplates = plugin.getConfigManager().getEventWinnerRewardCommands(rank);
+            if (commandTemplates.isEmpty()) {
+                continue;
+            }
 
-        for (EventScore winner : winners) {
             for (String template : commandTemplates) {
                 String command = template
                         .replace("%player%", winner.name())
                         .replace("%points%", String.valueOf(winner.points()))
+                        .replace("%rank%", String.valueOf(rank))
                         .replace("%id%", session.getSpawnerId())
                         .replace("%name%", session.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
@@ -214,7 +230,8 @@ public class EventManager {
             Player onlineWinner = Bukkit.getPlayer(winner.uuid());
             if (onlineWinner != null) {
                 plugin.getLangManager().send(onlineWinner, "event.reward-received",
-                        Placeholder.unparsed("name", session.getName()));
+                        Placeholder.unparsed("name", session.getName()),
+                        Placeholder.unparsed("rank", String.valueOf(rank)));
             }
         }
     }

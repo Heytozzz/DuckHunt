@@ -4,12 +4,13 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * The live state of one running "duck hunt" event: how much time is
@@ -24,6 +25,12 @@ public class EventSession {
     private final String name;
     private final int totalSeconds;
     private final long startedAtMillis;
+    // How many top-scoring players count as "winners" once this event
+    // ends. Resolved once at start (either given explicitly on
+    // "/duckhunt admin event start ..." or taken from
+    // "event.default-winner-count" in config.yml) and fixed for the
+    // rest of the event's lifetime.
+    private final int winnerCount;
     // Captured once at start, so announcements keep working even if the
     // spawn point is later moved/removed while the event is running.
     @Nullable
@@ -32,12 +39,13 @@ public class EventSession {
     private final Map<UUID, EventScore> scores = new LinkedHashMap<>();
     private int remainingSeconds;
 
-    public EventSession(String spawnerId, String name, int totalSeconds, @Nullable Location origin) {
+    public EventSession(String spawnerId, String name, int totalSeconds, int winnerCount, @Nullable Location origin) {
         this.spawnerId = spawnerId;
         this.name = name;
         this.totalSeconds = totalSeconds;
         this.remainingSeconds = totalSeconds;
         this.startedAtMillis = System.currentTimeMillis();
+        this.winnerCount = Math.max(1, winnerCount);
         this.origin = origin;
     }
 
@@ -51,6 +59,14 @@ public class EventSession {
 
     public int getTotalSeconds() {
         return totalSeconds;
+    }
+
+    /**
+     * How many top-scoring players are declared winners once this event
+     * ends (resolved once at start — see the constructor).
+     */
+    public int getWinnerCount() {
+        return winnerCount;
     }
 
     public long getStartedAtMillis() {
@@ -95,21 +111,21 @@ public class EventSession {
     }
 
     /**
-     * Every player tied for first place, sorted by name — empty if
-     * nobody scored any points.
+     * The top {@link #getWinnerCount()} scoring players, ranked highest
+     * points first (ties broken alphabetically by name) — empty if
+     * nobody scored any points. A player's position in this list (index
+     * 0 = 1st place) is their final placement, used to pick which
+     * "event.winner-rewards" entry they get.
      */
     public List<EventScore> getWinners() {
-        int max = scores.values().stream().mapToInt(EventScore::points).max().orElse(0);
-        if (max <= 0) {
-            return List.of();
+        List<EventScore> ranked = scores.values().stream()
+                .filter(score -> score.points() > 0)
+                .sorted(Comparator.comparingInt(EventScore::points).reversed()
+                        .thenComparing(score -> score.name().toLowerCase(Locale.ROOT)))
+                .collect(Collectors.toList());
+        if (ranked.size() > winnerCount) {
+            ranked = ranked.subList(0, winnerCount);
         }
-        List<EventScore> winners = new ArrayList<>();
-        for (EventScore score : scores.values()) {
-            if (score.points() == max) {
-                winners.add(score);
-            }
-        }
-        winners.sort(Comparator.comparing(score -> score.name().toLowerCase(java.util.Locale.ROOT)));
-        return winners;
+        return ranked;
     }
 }

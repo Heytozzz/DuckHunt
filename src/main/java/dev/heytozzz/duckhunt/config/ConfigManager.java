@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -93,7 +94,11 @@ public class ConfigManager {
 
     private Set<Integer> eventMilestoneSeconds;
     private boolean eventWinnerTitleEnabled;
-    private List<String> eventWinnerRewardCommands;
+    private int defaultEventWinnerCount;
+    // Keyed by 1-based placement ("1" = winner, "2" = runner-up, ...);
+    // the special "default" key (stored under DEFAULT_RANK_KEY, index 0)
+    // is the fallback for any placement without its own entry.
+    private Map<Integer, List<String>> eventWinnerRewardCommandsByRank;
     private EventScope eventStartScope;
     private EventScope eventCountdownScope;
     private EventScope eventWinnerScope;
@@ -197,7 +202,8 @@ public class ConfigManager {
             eventMilestoneSeconds = Set.of(60, 30, 5, 4, 3, 2, 1);
         }
         eventWinnerTitleEnabled = config.getBoolean("event.winner-title-enabled", true);
-        eventWinnerRewardCommands = config.getStringList("event.winner-rewards");
+        defaultEventWinnerCount = Math.max(1, config.getInt("event.default-winner-count", 1));
+        eventWinnerRewardCommandsByRank = parseWinnerRewardsByRank(config.getConfigurationSection("event.winner-rewards"));
 
         EventScope globalFallback = new EventScope(BroadcastMode.GLOBAL, 50.0, List.of());
         eventStartScope = EventScopeConfig.parse(
@@ -250,6 +256,47 @@ public class ConfigManager {
             new ParticleEffect(Particle.END_ROD, 2, 0.2, 0.3, 0.2, 0.0);
     private static final ParticleEffect DEFAULT_COMBO_PARTICLE =
             new ParticleEffect(Particle.CRIT, 2, 0.05, 0.05, 0.05, 0.0);
+    // Bucket key used internally for "event.winner-rewards: default:",
+    // the fallback list for any placement without its own entry. Zero
+    // is safe since real placements are always 1-based.
+    private static final int DEFAULT_REWARD_RANK = 0;
+
+    /**
+     * Parses "event.winner-rewards": a map from 1-based placement
+     * ("1", "2", ...) to a list of console command templates, plus an
+     * optional "default" entry used as a fallback for any placement
+     * that doesn't have its own list. Unknown/non-numeric keys other
+     * than "default" are skipped with a warning.
+     */
+    private Map<Integer, List<String>> parseWinnerRewardsByRank(@Nullable ConfigurationSection section) {
+        Map<Integer, List<String>> byRank = new LinkedHashMap<>();
+        if (section == null) {
+            return byRank;
+        }
+        for (String key : section.getKeys(false)) {
+            int rank;
+            if (key.equalsIgnoreCase("default")) {
+                rank = DEFAULT_REWARD_RANK;
+            } else {
+                try {
+                    rank = Integer.parseInt(key.trim());
+                } catch (NumberFormatException exception) {
+                    plugin.getLogger().warning(
+                            "Invalid 'event.winner-rewards' key '" + key + "' in config.yml, must be a whole "
+                                    + "number (placement) or 'default' — skipping.");
+                    continue;
+                }
+                if (rank < 1) {
+                    plugin.getLogger().warning(
+                            "Invalid 'event.winner-rewards' key '" + key + "' in config.yml, placements must be "
+                                    + "1 or higher — skipping.");
+                    continue;
+                }
+            }
+            byRank.put(rank, section.getStringList(key));
+        }
+        return byRank;
+    }
 
     /**
      * Parses "combo.tiers": a list of milestones, each with a kill-streak
@@ -756,13 +803,28 @@ public class ConfigManager {
     }
 
     /**
-     * Console command templates run once per winner when an event ends
-     * (skipped entirely if nobody scored any points). Each template can
-     * use %player% (the winner's name), %points% (their winning score),
-     * %id% (the spawn point id) and %name% (the event's name).
+     * How many top-scoring players are declared winners when an event
+     * ends, unless overridden on "/duckhunt admin event start ...".
      */
-    public List<String> getEventWinnerRewardCommands() {
-        return eventWinnerRewardCommands;
+    public int getDefaultEventWinnerCount() {
+        return defaultEventWinnerCount;
+    }
+
+    /**
+     * Console command templates run once for the winner at a given
+     * 1-based placement (1 = winner, 2 = runner-up, ...) when an event
+     * ends. Falls back to the "default" list if that placement has no
+     * entry of its own, or an empty list if neither is configured. Each
+     * template can use %player% (their name), %points% (their score),
+     * %rank% (their placement), %id% (the spawn point id) and %name%
+     * (the event's name).
+     */
+    public List<String> getEventWinnerRewardCommands(int rank) {
+        List<String> specific = eventWinnerRewardCommandsByRank.get(rank);
+        if (specific != null) {
+            return specific;
+        }
+        return eventWinnerRewardCommandsByRank.getOrDefault(DEFAULT_REWARD_RANK, List.of());
     }
 
     /**

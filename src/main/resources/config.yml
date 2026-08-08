@@ -255,12 +255,13 @@ effects:
       - particle: cloud
         count: 12
 
-# Timed events ("/duckhunt admin event start <spawner> <duration> [name]"):
-# whoever scores the most points at that spawn point before the timer
-# hits zero wins. Only kills of ducks spawned at that exact spawn point
-# count (and must still qualify under "leaderboard.min-kill-distance"
-# above, worth the same points as the persistent leaderboard). Multiple
-# events can run at once, one per spawn point.
+# Timed events ("/duckhunt admin event start <spawner> <duration> [name]
+# [winners]"): whoever scores the most points at that spawn point before
+# the timer hits zero wins. Only kills of ducks spawned at that exact
+# spawn point count (and must still qualify under
+# "leaderboard.min-kill-distance" above, worth the same points as the
+# persistent leaderboard). Multiple events can run at once, one per
+# spawn point.
 #
 # Every channel below (start/countdown/winner) is configured
 # independently:
@@ -275,17 +276,34 @@ event:
   # Whether the winner announcement also pops up as a title, in addition
   # to the chat message.
   winner-title-enabled: true
+  # How many top-scoring players are declared winners when an event
+  # ends, unless a different amount is given as the last argument of
+  # "/duckhunt admin event start <spawner> <duration> [name] [winners]".
+  default-winner-count: 1
   # Console commands run once per winner when an event ends (skipped
-  # entirely if nobody scored any points, and left empty by default so
-  # nothing runs until you configure it). Works with whatever economy/
-  # reward plugin you already have — this just runs its command.
-  # Placeholders: %player% (winner's name), %points% (their winning
-  # score), %id% (spawn point id), %name% (event name).
-  winner-rewards: []
+  # entirely if nobody scored any points), picked by their final
+  # placement — "1" for 1st place, "2" for 2nd, and so on. A placement
+  # with no list of its own falls back to "default"; if that's also
+  # missing/empty, nothing runs and that winner gets no reward-received
+  # message either. Works with whatever economy/reward plugin you
+  # already have — this just runs its command(s).
+  # Placeholders: %player% (their name), %points% (their score), %rank%
+  # (their placement, e.g. 1), %id% (spawn point id), %name% (event
+  # name).
+  winner-rewards:
+    "1": []
+    default: []
   # Examples (uncomment/adapt to whatever plugin you use):
-  #  - "eco give %player% 500"
-  #  - "give %player% diamond 3"
-  #  - "lp user %player% permission settemp duckhunt.champion true 1d"
+  #  "1":
+  #    - "eco give %player% 500"
+  #    - "give %player% diamond 3"
+  #    - "lp user %player% permission settemp duckhunt.champion true 1d"
+  #  "2":
+  #    - "eco give %player% 250"
+  #  "3":
+  #    - "eco give %player% 100"
+  #  default:
+  #    - "eco give %player% 50"
 
   # Announced once when the event starts.
   start:

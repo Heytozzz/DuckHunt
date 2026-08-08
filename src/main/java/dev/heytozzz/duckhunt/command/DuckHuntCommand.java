@@ -203,11 +203,26 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             plugin.getLangManager().send(sender, "error.invalid-duration");
             return;
         }
-        // Everything after the duration is the (optional) event name,
-        // joined back with spaces; defaults to the spawner's own id.
-        String name = args.length > 4 ? String.join(" ", Arrays.copyOfRange(args, 4, args.length)) : spawnerId;
 
-        EventManager.StartResult result = plugin.getEventManager().startEvent(spawnerId, name, seconds.intValue());
+        // Everything after the duration is the (optional) event name,
+        // possibly followed by the (optional) winner count as the very
+        // last token — e.g. "... 10m Summer Hunt 3" means name "Summer
+        // Hunt" with 3 winners. If the last token isn't a valid whole
+        // number it's just treated as part of the name instead, and the
+        // configured default winner count is used.
+        String[] rest = Arrays.copyOfRange(args, 4, args.length);
+        int winnerCount = plugin.getConfigManager().getDefaultEventWinnerCount();
+        if (rest.length > 0) {
+            Integer parsedWinners = parseAmount(rest[rest.length - 1]);
+            if (parsedWinners != null) {
+                winnerCount = parsedWinners;
+                rest = Arrays.copyOfRange(rest, 0, rest.length - 1);
+            }
+        }
+        String name = rest.length > 0 ? String.join(" ", rest) : spawnerId;
+
+        EventManager.StartResult result =
+                plugin.getEventManager().startEvent(spawnerId, name, seconds.intValue(), winnerCount);
         switch (result) {
             case SPAWNER_NOT_FOUND ->
                     plugin.getLangManager().send(sender, "spawnpoint.not-found", Placeholder.unparsed("id", spawnerId));
@@ -216,7 +231,8 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             case STARTED -> plugin.getLangManager().send(sender, "event.start-confirm",
                     Placeholder.unparsed("id", spawnerId),
                     Placeholder.unparsed("name", name),
-                    Placeholder.unparsed("time", EventManager.formatClock(seconds.intValue())));
+                    Placeholder.unparsed("time", EventManager.formatClock(seconds.intValue())),
+                    Placeholder.unparsed("winners", String.valueOf(winnerCount)));
         }
     }
 
@@ -246,7 +262,8 @@ public class DuckHuntCommand implements CommandExecutor, TabCompleter {
             plugin.getLangManager().send(sender, "event.list-entry",
                     Placeholder.unparsed("id", session.getSpawnerId()),
                     Placeholder.unparsed("name", session.getName()),
-                    Placeholder.unparsed("time", EventManager.formatClock(session.getRemainingSeconds())));
+                    Placeholder.unparsed("time", EventManager.formatClock(session.getRemainingSeconds())),
+                    Placeholder.unparsed("winners", String.valueOf(session.getWinnerCount())));
         }
     }
 

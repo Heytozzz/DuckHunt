@@ -64,20 +64,20 @@ path:
   list-empty: "<gradient:#B3B3B3:#696969>El punto de aparición </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> todavía no tiene waypoints. Usa /duckhunt admin spawner <id> path add.</gradient>"
 
 event:
-  announce-start: "<gradient:#FBDA00:#A89200><bold>EVENTO</bold></gradient> <gradient:#B3B3B3:#696969>¡</gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> acaba de empezar en </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969>! Tienes </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969> para hacer la mayor cantidad de puntos.</gradient>"
+  announce-start: "<gradient:#FBDA00:#A89200><bold>EVENTO</bold></gradient> <gradient:#B3B3B3:#696969>¡</gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> acaba de empezar en </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969>! Tienes </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969> para quedar entre los </gradient><gradient:#FBDA00:#A89200><winners></gradient><gradient:#B3B3B3:#696969> mejor(es).</gradient>"
   actionbar: "<gradient:#FBDA00:#A89200><time></gradient>"
   milestone: "<gradient:#FBDA00:#A89200><name></gradient> <gradient:#B3B3B3:#696969>¡</gradient><gradient:#FBDA00:#A89200><seconds></gradient><gradient:#B3B3B3:#696969> segundo(s) restante(s)!</gradient>"
   announce-winner: "<gradient:#FBDA00:#A89200><bold>EVENTO</bold></gradient> <gradient:#B3B3B3:#696969>¡</gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> terminó! </gradient><gradient:#FBDA00:#A89200><winner></gradient><gradient:#B3B3B3:#696969> gana con </gradient><gradient:#FBDA00:#A89200><points></gradient><gradient:#B3B3B3:#696969> punto(s)!</gradient>"
   no-winner: "<gradient:#FBDA00:#A89200><bold>EVENTO</bold></gradient> <gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> terminó — nadie hizo puntos.</gradient>"
   winner-title-main: "<gradient:#FBDA00:#A89200><bold><name></bold></gradient>"
   winner-title-sub: "<gradient:#FBDA00:#A89200><winner></gradient><gradient:#B3B3B3:#696969> gana con </gradient><gradient:#FBDA00:#A89200><points></gradient><gradient:#B3B3B3:#696969> punto(s)!</gradient>"
-  reward-received: "<gradient:#B3B3B3:#696969>¡Recibiste tu recompensa por ganar </gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969>!</gradient>"
+  reward-received: "<gradient:#B3B3B3:#696969>¡Recibiste tu recompensa por quedar en el puesto </gradient><gradient:#FBDA00:#A89200>#<rank></gradient><gradient:#B3B3B3:#696969> de </gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969>!</gradient>"
   already-active: "<gradient:#B3B3B3:#696969>El punto de aparición </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> ya tiene un evento activo.</gradient>"
   not-active: "<gradient:#B3B3B3:#696969>El punto de aparición </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> no tiene un evento activo.</gradient>"
-  start-confirm: "<gradient:#B3B3B3:#696969>Evento </gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> iniciado en </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> por </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969>.</gradient>"
+  start-confirm: "<gradient:#B3B3B3:#696969>Evento </gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969> iniciado en </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> por </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969> con </gradient><gradient:#FBDA00:#A89200><winners></gradient><gradient:#B3B3B3:#696969> ganador(es).</gradient>"
   stopped: "<gradient:#B3B3B3:#696969>Se terminó el evento de </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969>.</gradient>"
   list-header: "<gradient:#B3B3B3:#696969>Eventos activos:</gradient>"
-  list-entry: "<gradient:#B3B3B3:#696969> - </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> (</gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969>) </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969> restante</gradient>"
+  list-entry: "<gradient:#B3B3B3:#696969> - </gradient><gradient:#FBDA00:#A89200><id></gradient><gradient:#B3B3B3:#696969> (</gradient><gradient:#FBDA00:#A89200><name></gradient><gradient:#B3B3B3:#696969>) </gradient><gradient:#FBDA00:#A89200><time></gradient><gradient:#B3B3B3:#696969> restante, </gradient><gradient:#FBDA00:#A89200><winners></gradient><gradient:#B3B3B3:#696969> ganador(es)</gradient>"
   list-empty: "<gradient:#B3B3B3:#696969>No hay eventos activos en este momento.</gradient>"
 
 usage:
@@ -92,7 +92,7 @@ usage:
   admin-top: "<gradient:#B3B3B3:#696969>Uso: /duckhunt admin top reset [jugador|all]</gradient>"
   admin-settings: "<gradient:#B3B3B3:#696969>Uso: /duckhunt admin settings broadcast [global|radius <bloques>]</gradient>"
   event: "<gradient:#B3B3B3:#696969>Uso: /duckhunt admin event [start|stop|list] ...</gradient>"
-  event-start: "<gradient:#B3B3B3:#696969>Uso: /duckhunt admin event start [spawner] [duración] [nombre]</gradient>"
+  event-start: "<gradient:#B3B3B3:#696969>Uso: /duckhunt admin event start [spawner] [duración] [nombre] [ganadores]</gradient>"
   event-stop: "<gradient:#B3B3B3:#696969>Uso: /duckhunt admin event stop [spawner]</gradient>"
 
 error:
