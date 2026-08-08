@@ -171,6 +171,40 @@ combo:
         offset-y: 0.08
         offset-z: 0.08
         speed: 0.0
+  # A sound that plays (to the killer only) on every kill that advances
+  # a streak, with its pitch climbing a bit further each time so a long
+  # streak feels increasingly urgent — once the pitch would reach 2.0 it
+  # wraps back down to 1.0 rather than climbing forever.
+  sound:
+    enabled: true
+    sound: block.trial_spawner.spawn_item
+    volume: 1.0
+    # How much the pitch climbs per kill, e.g. with the default 0.1:
+    # kill 1 -> 1.0, kill 2 -> 1.1, ... kill 11 wraps back to 1.0.
+    pitch-step: 0.1
+  # How the current streak count ("Combo: xN") is shown to the killer.
+  # Every mode below shows the exact same text, just through a
+  # different channel:
+  #   chat          - a normal chat message.
+  #   actionbar     - the action bar (default).
+  #   title         - a Title with an invisible main line and the combo
+  #                   count as its subtitle.
+  #   floating-text - text that floats upward and shrinks away right in
+  #                   front of the killer, landing with a random
+  #                   left/right/up/down offset each time.
+  display:
+    mode: actionbar
+    # Only used when mode is "floating-text":
+    floating-text:
+      # How far in front of the killer's eyes (in blocks) it appears.
+      distance: 1.2
+      # Maximum random left/right and up/down offset (in blocks) from
+      # directly in front of them.
+      spread: 0.4
+      # How many blocks it drifts upward before disappearing.
+      rise: 0.6
+      # How long (in ticks) the float-up-and-shrink animation takes.
+      duration-ticks: 24
 
 # Broadcasts a message whenever a duck is killed (independent from
 # whether that kill counted towards the leaderboard above).

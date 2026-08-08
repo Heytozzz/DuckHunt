@@ -3,7 +3,10 @@ package dev.heytozzz.duckhunt.combo;
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.effect.ParticleEffect;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.title.Title;
 import org.bukkit.World;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
@@ -11,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -24,7 +28,10 @@ import java.util.UUID;
  * "combo.tiers" gives the player's arrows a trailing particle effect
  * (until the streak drops below that tier or a new bow shot happens to
  * carry the current one) and multiplies the points their qualifying
- * kills are worth.
+ * kills are worth. Every kill that advances a streak also plays a sound
+ * with a climbing pitch ("combo.sound") and shows the current count
+ * through whichever channel "combo.display.mode" is configured to
+ * (chat, action bar, a title, or floating text in front of the player).
  *
  * <p>A single repeating task (see {@link #tick()}) both expires stale
  * streaks and advances every in-flight "combo arrow"'s particle trail,
@@ -111,9 +118,49 @@ public class ComboManager {
         if (currentTier != null && currentTier != previousTier) {
             plugin.getLangManager().send(player, "combo.tier-up", Placeholder.unparsed("combo", String.valueOf(combo)));
         }
-        plugin.getLangManager().sendActionBar(player, "combo.actionbar", Placeholder.unparsed("combo", String.valueOf(combo)));
+
+        playComboSound(player, combo);
+        showComboIndicator(player, combo);
 
         return combo;
+    }
+
+    /**
+     * Plays "combo.sound.sound" to the player only, with its pitch
+     * climbing by "combo.sound.pitch-step" on every kill and wrapping
+     * back down to 1.0 once it would reach 2.0 (see
+     * {@link ConfigManager#getComboSoundPitchStep()}).
+     */
+    private void playComboSound(Player player, int combo) {
+        if (!config.isComboSoundEnabled()) {
+            return;
+        }
+        double step = config.getComboSoundPitchStep();
+        float pitch = (float) (1.0 + (((combo - 1) * step) % 1.0));
+        player.playSound(player.getLocation(), config.getComboSoundKey(), (float) config.getComboSoundVolume(), pitch);
+    }
+
+    /**
+     * Shows the player their current combo count through whichever
+     * channel "combo.display.mode" is set to. Every mode renders the
+     * same "combo.actionbar" text — only where it ends up differs.
+     */
+    private void showComboIndicator(Player player, int combo) {
+        TagResolver placeholder = Placeholder.unparsed("combo", String.valueOf(combo));
+        switch (config.getComboDisplayMode()) {
+            case CHAT -> plugin.getLangManager().send(player, "combo.actionbar", placeholder);
+            case TITLE -> {
+                Component subtitle = plugin.getLangManager().renderRaw(player, "combo.actionbar", placeholder);
+                Title.Times times =
+                        Title.Times.times(Duration.ofMillis(150), Duration.ofSeconds(1), Duration.ofMillis(300));
+                player.showTitle(Title.title(Component.empty(), subtitle, times));
+            }
+            case FLOATING_TEXT -> {
+                Component text = plugin.getLangManager().renderRaw(player, "combo.actionbar", placeholder);
+                FloatingComboText.show(plugin, player, text);
+            }
+            case ACTIONBAR -> plugin.getLangManager().sendActionBar(player, "combo.actionbar", placeholder);
+        }
     }
 
     /**

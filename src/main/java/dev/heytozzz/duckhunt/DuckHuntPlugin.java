@@ -29,7 +29,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
     private static final String BANNER =
             "      ,~~.\n" +
             "     (  6 )-_,\n" +
-            "(\\___ )=='-'    DuckHunt 1.5.0 enabled\n" +
+            "(\\___ )=='-'    DuckHunt 1.6.0 enabled\n" +
             " \\ .   ) )\n" +
             "  \\_`-'_/     ";
 

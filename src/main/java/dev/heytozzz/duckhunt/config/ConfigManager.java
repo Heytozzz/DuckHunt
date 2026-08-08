@@ -1,6 +1,7 @@
 package dev.heytozzz.duckhunt.config;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.combo.ComboDisplayMode;
 import dev.heytozzz.duckhunt.combo.ComboTier;
 import dev.heytozzz.duckhunt.effect.EffectConfig;
 import dev.heytozzz.duckhunt.effect.EffectSet;
@@ -71,6 +72,17 @@ public class ConfigManager {
     private double comboWindowSeconds;
     private int comboTickIntervalTicks;
     private List<ComboTier> comboTiers;
+
+    private boolean comboSoundEnabled;
+    private String comboSoundKey;
+    private double comboSoundVolume;
+    private double comboSoundPitchStep;
+
+    private ComboDisplayMode comboDisplayMode;
+    private double comboFloatingTextDistance;
+    private double comboFloatingTextSpread;
+    private double comboFloatingTextRise;
+    private int comboFloatingTextDurationTicks;
 
     private Set<Integer> eventMilestoneSeconds;
     private boolean eventWinnerTitleEnabled;
@@ -146,6 +158,21 @@ public class ConfigManager {
         comboWindowSeconds = Math.max(0.1, config.getDouble("combo.window-seconds", 5.0));
         comboTickIntervalTicks = Math.max(1, config.getInt("combo.tick-interval-ticks", 4));
         comboTiers = parseComboTiers(config);
+
+        comboSoundEnabled = config.getBoolean("combo.sound.enabled", true);
+        comboSoundKey = config.getString("combo.sound.sound", "block.trial_spawner.spawn_item");
+        comboSoundVolume = Math.max(0.0, config.getDouble("combo.sound.volume", 1.0));
+        comboSoundPitchStep = config.getDouble("combo.sound.pitch-step", 0.1);
+
+        comboDisplayMode = ComboDisplayMode.parse(config.getString("combo.display.mode"));
+        if (comboDisplayMode == null) {
+            comboDisplayMode = ComboDisplayMode.ACTIONBAR;
+        }
+        comboFloatingTextDistance = Math.max(0.1, config.getDouble("combo.display.floating-text.distance", 1.2));
+        comboFloatingTextSpread = Math.max(0.0, config.getDouble("combo.display.floating-text.spread", 0.4));
+        comboFloatingTextRise = Math.max(0.0, config.getDouble("combo.display.floating-text.rise", 0.6));
+        comboFloatingTextDurationTicks =
+                Math.max(1, config.getInt("combo.display.floating-text.duration-ticks", 24));
 
         eventMilestoneSeconds = new LinkedHashSet<>(config.getIntegerList("event.milestone-seconds"));
         if (eventMilestoneSeconds.isEmpty()) {
@@ -549,6 +576,80 @@ public class ConfigManager {
      */
     public List<ComboTier> getComboTiers() {
         return comboTiers;
+    }
+
+    /**
+     * Whether a sound plays on every kill that advances a player's
+     * combo streak (see {@link #getComboSoundPitchStep()} for the
+     * climbing-pitch behaviour).
+     */
+    public boolean isComboSoundEnabled() {
+        return comboSoundEnabled;
+    }
+
+    /**
+     * Sound key played on every combo-advancing kill (vanilla shorthand
+     * or a custom "namespace:key", same as an {@link EffectSet} sound).
+     */
+    public String getComboSoundKey() {
+        return comboSoundKey;
+    }
+
+    public double getComboSoundVolume() {
+        return comboSoundVolume;
+    }
+
+    /**
+     * How much the sound's pitch climbs per kill in the streak, wrapping
+     * back down once it would reach 2.0. E.g. with the default 0.1 step,
+     * kill 1 plays at pitch 1.0, kill 2 at 1.1, ... kill 11 wraps back to
+     * 1.0 rather than continuing to 2.0.
+     */
+    public double getComboSoundPitchStep() {
+        return comboSoundPitchStep;
+    }
+
+    /**
+     * How the per-kill "Combo: xN" indicator is delivered to the player.
+     */
+    public ComboDisplayMode getComboDisplayMode() {
+        return comboDisplayMode;
+    }
+
+    /**
+     * Only used when {@link #getComboDisplayMode()} is
+     * {@link ComboDisplayMode#FLOATING_TEXT}: how far in front of the
+     * player's eyes (in blocks) it appears.
+     */
+    public double getComboFloatingTextDistance() {
+        return comboFloatingTextDistance;
+    }
+
+    /**
+     * Only used when {@link #getComboDisplayMode()} is
+     * {@link ComboDisplayMode#FLOATING_TEXT}: maximum random left/right
+     * and up/down offset (in blocks) from directly in front of the player.
+     */
+    public double getComboFloatingTextSpread() {
+        return comboFloatingTextSpread;
+    }
+
+    /**
+     * Only used when {@link #getComboDisplayMode()} is
+     * {@link ComboDisplayMode#FLOATING_TEXT}: how many blocks it drifts
+     * upward over its lifetime.
+     */
+    public double getComboFloatingTextRise() {
+        return comboFloatingTextRise;
+    }
+
+    /**
+     * Only used when {@link #getComboDisplayMode()} is
+     * {@link ComboDisplayMode#FLOATING_TEXT}: how long (in ticks) the
+     * float-up-and-shrink animation takes before it's removed.
+     */
+    public int getComboFloatingTextDurationTicks() {
+        return comboFloatingTextDurationTicks;
     }
 
     /**
