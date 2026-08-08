@@ -35,6 +35,11 @@ auto:
 kill:
   broadcast: "<gradient:#FBDA00:#A89200><player></gradient> <gradient:#B3B3B3:#696969>¡cazó un pato!</gradient>"
 
+combo:
+  tier-up: "<gradient:#FBDA00:#A89200><bold>COMBO</bold> x<combo></gradient><gradient:#B3B3B3:#696969> — ¡tus flechas ahora dejan una estela de partículas!</gradient>"
+  actionbar: "<gradient:#B3B3B3:#696969>Combo: </gradient><gradient:#FBDA00:#A89200>x<combo></gradient>"
+  broken: "<gradient:#B3B3B3:#696969>Racha perdida en </gradient><gradient:#FBDA00:#A89200>x<combo></gradient><gradient:#B3B3B3:#696969>.</gradient>"
+
 top:
   header: "<gradient:#B3B3B3:#696969>Top cazadores de patos:</gradient>"
   entry: "<gradient:#B3B3B3:#696969> - #</gradient><gradient:#FBDA00:#A89200><rank></gradient><gradient:#B3B3B3:#696969> </gradient><gradient:#FBDA00:#A89200><player></gradient><gradient:#B3B3B3:#696969> - </gradient><gradient:#FBDA00:#A89200><points></gradient><gradient:#B3B3B3:#696969> punto(s) (</gradient><gradient:#FBDA00:#A89200><kills></gradient><gradient:#B3B3B3:#696969> pato(s))</gradient>"

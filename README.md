@@ -134,6 +134,30 @@ capacity setting: a spawn point with `amount: 3` and instant respawn
 enabled always keeps 3 ducks up, refilled one at a time as they're
 caught.
 
+## Combo streaks
+
+Chaining duck kills close together builds a combo streak (tracked
+in-memory per player, not persisted across restarts):
+
+- Killing a duck within `combo.window-seconds` (default `5.0`) of your
+  last one extends your streak by 1; going quiet for longer resets it to
+  zero. **Any** duck kill counts towards the streak — it doesn't need to
+  qualify under `leaderboard.min-kill-distance` like leaderboard points
+  do.
+- Reaching one of `combo.tiers` in `config.yml` gives every arrow you
+  shoot from then on a trailing particle effect (until your streak drops
+  below that tier, or climbs into a higher one) and multiplies the
+  points your *qualifying* kills are worth by that tier's
+  `points-multiplier`.
+- Your current streak shows in your action bar on every kill; reaching a
+  new tier also sends a chat message, and losing a streak announces how
+  high it got.
+
+Example default tiers: `5` kills → 1.2x points, `10` kills → 1.5x points
+plus a flame trail, `20` kills → 2x points plus an end rod trail. Add,
+remove, or restyle tiers freely — each one's `particle` is optional and
+falls back to `combo.default-particle` if omitted.
+
 ## Leaderboard
 
 `/duckhunt top` shows the `leaderboard.top-size` (default 10) players
@@ -144,7 +168,9 @@ points, with kill count as a tiebreaker.
   points linearly interpolated between `leaderboard.min-points` (for a
   duck rolled at `duck.speed.min`) and `leaderboard.max-points` (for one
   rolled at `duck.speed.max`) — see [Random duck types &
-  speed](#random-duck-types--speed) above.
+  speed](#random-duck-types--speed) above. That base value is then
+  multiplied by the duck's own bonus if it was rare, and by your active
+  [combo tier](#combo-streaks) if you're on a streak.
 - **Only ranged/skillful kills count.** A kill only counts towards the
   leaderboard if the killer was at least `leaderboard.min-kill-distance`
   blocks (default `10.0`) away from the duck at the moment of death —

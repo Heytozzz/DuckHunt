@@ -21,9 +21,10 @@ import org.jetbrains.annotations.Nullable;
  * Listens for duck deaths, frees up its spawn point's capacity, plays its
  * elimination sound/particle effects, records a leaderboard kill (if the
  * killer was far enough away) worth points based on how fast the duck
- * was (multiplied further if it happened to be a rare duck), feeds those
- * same points into that spawn point's active event (if any), and (if
- * enabled) broadcasts the kill.
+ * was (multiplied further if it was rare and/or the killer is on a combo
+ * streak), feeds those same points into that spawn point's active event
+ * (if any), always registers the kill towards the killer's combo streak,
+ * and (if enabled) broadcasts the kill.
  */
 public class DuckDeathListener implements Listener {
 
@@ -61,8 +62,15 @@ public class DuckDeathListener implements Listener {
         EffectPlayer.play(deathLocation, resolveDeathEffects(spawnId));
 
         if (killer != null) {
+            // Streak tracking runs on every kill, regardless of distance:
+            // it's about how fast you're chaining kills, not how far away
+            // you are when you land them.
+            plugin.getComboManager().registerKill(killer);
+
             if (qualifiesForLeaderboard(killer, deathLocation)) {
-                int points = (int) Math.round(plugin.getConfigManager().getPointsForSpeed(speed) * pointsMultiplier);
+                double comboMultiplier = plugin.getComboManager().getPointsMultiplier(killer);
+                int points = (int) Math.round(
+                        plugin.getConfigManager().getPointsForSpeed(speed) * pointsMultiplier * comboMultiplier);
                 int total = plugin.getLeaderboardManager().recordKill(killer, points);
                 plugin.getLangManager().send(killer, "top.points-earned",
                         Placeholder.unparsed("points", String.valueOf(points)),

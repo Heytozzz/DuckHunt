@@ -123,6 +123,55 @@ leaderboard:
   min-points: 1
   max-points: 3
 
+# Duck-kill combo/streak system: chaining kills close together builds a
+# streak, giving your arrows a particle trail and multiplying the points
+# your qualifying kills are worth. Going quiet for too long resets it.
+combo:
+  enabled: true
+  # Max seconds allowed between two consecutive duck kills for the
+  # streak to keep climbing. Any kill counts towards a streak, even one
+  # too close-range to qualify for leaderboard points itself.
+  window-seconds: 5.0
+  # How often (in ticks) streaks are checked for expiry and every
+  # in-flight "combo arrow"'s trail is advanced.
+  tick-interval-ticks: 4
+  # Fallback particle for any tier below that doesn't set its own
+  # "particle" section. Same shape as one entry under "effects" above.
+  default-particle:
+    particle: crit
+    count: 2
+    offset-x: 0.05
+    offset-y: 0.05
+    offset-z: 0.05
+    speed: 0.0
+  # Milestones: reaching "combo" kills in a row (without the streak
+  # expiring) gives arrows shot from then on "particle" as a trail (until
+  # the streak either climbs into a higher tier or expires) and
+  # multiplies qualifying kills' points by "points-multiplier". Listing
+  # order doesn't matter (they're sorted automatically), but each
+  # "combo" value should be unique.
+  tiers:
+    - combo: 5
+      points-multiplier: 1.2
+    - combo: 10
+      points-multiplier: 1.5
+      particle:
+        particle: flame
+        count: 3
+        offset-x: 0.06
+        offset-y: 0.06
+        offset-z: 0.06
+        speed: 0.0
+    - combo: 20
+      points-multiplier: 2.0
+      particle:
+        particle: end_rod
+        count: 4
+        offset-x: 0.08
+        offset-y: 0.08
+        offset-z: 0.08
+        speed: 0.0
+
 # Broadcasts a message whenever a duck is killed (independent from
 # whether that kill counted towards the leaderboard above).
 kill-broadcast:

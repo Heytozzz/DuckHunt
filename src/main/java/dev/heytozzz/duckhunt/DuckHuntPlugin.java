@@ -1,11 +1,13 @@
 package dev.heytozzz.duckhunt;
 
+import dev.heytozzz.duckhunt.combo.ComboManager;
 import dev.heytozzz.duckhunt.command.DuckHuntCommand;
 import dev.heytozzz.duckhunt.config.ConfigManager;
 import dev.heytozzz.duckhunt.config.SpawnPointManager;
 import dev.heytozzz.duckhunt.event.EventManager;
 import dev.heytozzz.duckhunt.lang.LangManager;
 import dev.heytozzz.duckhunt.leaderboard.LeaderboardManager;
+import dev.heytozzz.duckhunt.listener.ComboArrowListener;
 import dev.heytozzz.duckhunt.listener.DuckDeathListener;
 import dev.heytozzz.duckhunt.spawn.AutoSpawnManager;
 import dev.heytozzz.duckhunt.spawn.DuckKeys;
@@ -22,11 +24,12 @@ public final class DuckHuntPlugin extends JavaPlugin {
     private AutoSpawnManager autoSpawnManager;
     private LeaderboardManager leaderboardManager;
     private EventManager eventManager;
+    private ComboManager comboManager;
 
     private static final String BANNER =
             "      ,~~.\n" +
             "     (  6 )-_,\n" +
-            "(\\___ )=='-'    DuckHunt 1.2.0 enabled\n" +
+            "(\\___ )=='-'    DuckHunt 1.5.0 enabled\n" +
             " \\ .   ) )\n" +
             "  \\_`-'_/     ";
 
@@ -53,6 +56,8 @@ public final class DuckHuntPlugin extends JavaPlugin {
         this.eventManager = new EventManager(this);
         this.eventManager.load();
 
+        this.comboManager = new ComboManager(this);
+
         this.duckSpawner = new DuckSpawner(this);
         // Ducks don't survive a restart cleanly: their stripped AI goals
         // and active pathfinder navigation are runtime-only state that
@@ -67,6 +72,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
         PluginManager pluginManager = getServer().getPluginManager();
         pluginManager.registerEvents(new DuckDeathListener(this), this);
+        pluginManager.registerEvents(new ComboArrowListener(this), this);
 
         DuckHuntCommand commandHandler = new DuckHuntCommand(this);
         var command = getCommand("duckhunt");
@@ -82,6 +88,7 @@ public final class DuckHuntPlugin extends JavaPlugin {
         duckSpawner.startPathFollowing();
         duckSpawner.startRareDuckEffects();
         eventManager.start();
+        comboManager.start();
 
         // Restock every spawn point right away, instead of leaving them
         // empty until the first auto-spawn tick or a manual command.
@@ -99,6 +106,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
         }
         if (eventManager != null) {
             eventManager.stop();
+        }
+        if (comboManager != null) {
+            comboManager.stop();
         }
         getLogger().info("DuckHunt disabled.");
     }
@@ -129,5 +139,9 @@ public final class DuckHuntPlugin extends JavaPlugin {
 
     public EventManager getEventManager() {
         return eventManager;
+    }
+
+    public ComboManager getComboManager() {
+        return comboManager;
     }
 }

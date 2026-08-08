@@ -35,6 +35,11 @@ auto:
 kill:
   broadcast: "<gradient:#FBDA00:#A89200><player></gradient> <gradient:#B3B3B3:#696969>caught a duck!</gradient>"
 
+combo:
+  tier-up: "<gradient:#FBDA00:#A89200><bold>COMBO</bold> x<combo></gradient><gradient:#B3B3B3:#696969> — your arrows are trailing particles now!</gradient>"
+  actionbar: "<gradient:#B3B3B3:#696969>Combo: </gradient><gradient:#FBDA00:#A89200>x<combo></gradient>"
+  broken: "<gradient:#B3B3B3:#696969>Streak broken at </gradient><gradient:#FBDA00:#A89200>x<combo></gradient><gradient:#B3B3B3:#696969>.</gradient>"
+
 top:
   header: "<gradient:#B3B3B3:#696969>Top duck hunters:</gradient>"
   entry: "<gradient:#B3B3B3:#696969> - #</gradient><gradient:#FBDA00:#A89200><rank></gradient><gradient:#B3B3B3:#696969> </gradient><gradient:#FBDA00:#A89200><player></gradient><gradient:#B3B3B3:#696969> - </gradient><gradient:#FBDA00:#A89200><points></gradient><gradient:#B3B3B3:#696969> point(s) (</gradient><gradient:#FBDA00:#A89200><kills></gradient><gradient:#B3B3B3:#696969> kill(s))</gradient>"

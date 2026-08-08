@@ -1,6 +1,7 @@
 package dev.heytozzz.duckhunt.config;
 
 import dev.heytozzz.duckhunt.DuckHuntPlugin;
+import dev.heytozzz.duckhunt.combo.ComboTier;
 import dev.heytozzz.duckhunt.effect.EffectConfig;
 import dev.heytozzz.duckhunt.effect.EffectSet;
 import dev.heytozzz.duckhunt.effect.ParticleEffect;
@@ -15,9 +16,11 @@ import org.bukkit.entity.Mob;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -64,6 +67,11 @@ public class ConfigManager {
     private EffectSet defaultSpawnEffects;
     private EffectSet defaultDeathEffects;
 
+    private boolean comboEnabled;
+    private double comboWindowSeconds;
+    private int comboTickIntervalTicks;
+    private List<ComboTier> comboTiers;
+
     private Set<Integer> eventMilestoneSeconds;
     private boolean eventWinnerTitleEnabled;
     private List<String> eventWinnerRewardCommands;
@@ -96,7 +104,8 @@ public class ConfigManager {
         rareSpeedMultiplier = Math.max(1.0, config.getDouble("duck.rare.speed-multiplier", 1.6));
         rarePointsMultiplier = Math.max(1.0, config.getDouble("duck.rare.points-multiplier", 4.0));
         rareParticleIntervalTicks = Math.max(1, config.getInt("duck.rare.particle-interval-ticks", 4));
-        rareDuckParticle = parseRareParticle(config.getConfigurationSection("duck.rare.particle"));
+        rareDuckParticle = parseParticleSection(
+                config.getConfigurationSection("duck.rare.particle"), DEFAULT_RARE_PARTICLE);
 
         defaultDuckAmount = Math.max(1, config.getInt("spawn.default-amount", 1));
         instantRespawn = config.getBoolean("spawn.instant-respawn", false);
@@ -132,6 +141,11 @@ public class ConfigManager {
         if (defaultDeathEffects == null) {
             defaultDeathEffects = EffectSet.EMPTY;
         }
+
+        comboEnabled = config.getBoolean("combo.enabled", true);
+        comboWindowSeconds = Math.max(0.1, config.getDouble("combo.window-seconds", 5.0));
+        comboTickIntervalTicks = Math.max(1, config.getInt("combo.tick-interval-ticks", 4));
+        comboTiers = parseComboTiers(config);
 
         eventMilestoneSeconds = new LinkedHashSet<>(config.getIntegerList("event.milestone-seconds"));
         if (eventMilestoneSeconds.isEmpty()) {
@@ -189,31 +203,90 @@ public class ConfigManager {
 
     private static final ParticleEffect DEFAULT_RARE_PARTICLE =
             new ParticleEffect(Particle.END_ROD, 2, 0.2, 0.3, 0.2, 0.0);
+    private static final ParticleEffect DEFAULT_COMBO_PARTICLE =
+            new ParticleEffect(Particle.CRIT, 2, 0.05, 0.05, 0.05, 0.0);
 
     /**
-     * Parses "duck.rare.particle": same shape as one entry of an
-     * {@link EffectSet}'s particle list, just not wrapped in a list
-     * since a rare duck only ever has the one trailing particle.
+     * Parses "combo.tiers": a list of milestones, each with a kill-streak
+     * threshold, a points multiplier, and an optional particle override
+     * (falling back to "combo.default-particle" if omitted). Invalid
+     * entries (missing/non-positive "combo") are skipped with a warning.
+     * The result is always sorted ascending by threshold, since
+     * {@link dev.heytozzz.duckhunt.combo.ComboManager} relies on that
+     * order to find a streak's highest qualifying tier.
      */
-    private ParticleEffect parseRareParticle(@Nullable ConfigurationSection section) {
+    private List<ComboTier> parseComboTiers(FileConfiguration config) {
+        ParticleEffect defaultParticle =
+                parseParticleSection(config.getConfigurationSection("combo.default-particle"), DEFAULT_COMBO_PARTICLE);
+
+        List<ComboTier> tiers = new ArrayList<>();
+        for (Map<?, ?> entry : config.getMapList("combo.tiers")) {
+            Object thresholdValue = entry.get("combo");
+            if (!(thresholdValue instanceof Number number) || number.intValue() <= 0) {
+                plugin.getLogger().warning("Skipping a 'combo.tiers' entry with a missing/invalid 'combo' threshold.");
+                continue;
+            }
+            double multiplier = Math.max(1.0, toDouble(entry.get("points-multiplier"), 1.0));
+            ParticleEffect particle = entry.get("particle") instanceof Map<?, ?> particleMap
+                    ? parseParticleMap(particleMap, defaultParticle)
+                    : defaultParticle;
+            tiers.add(new ComboTier(number.intValue(), multiplier, particle));
+        }
+        tiers.sort(Comparator.comparingInt(ComboTier::threshold));
+        return tiers;
+    }
+
+    /**
+     * Parses a single particle description out of a {@link ConfigurationSection}
+     * (used for both "duck.rare.particle" and "combo.default-particle" —
+     * same shape as one entry of an {@link EffectSet}'s particle list,
+     * just not wrapped in a list since there's always exactly one).
+     */
+    private ParticleEffect parseParticleSection(@Nullable ConfigurationSection section, ParticleEffect fallback) {
         if (section == null) {
-            return DEFAULT_RARE_PARTICLE;
+            return fallback;
         }
-        String rawType = section.getString("particle", "end_rod");
-        Particle particle;
-        try {
-            particle = Particle.valueOf(rawType.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning(
-                    "Invalid 'duck.rare.particle.particle': '" + rawType + "', falling back to end_rod.");
-            particle = Particle.END_ROD;
-        }
-        int count = Math.max(0, section.getInt("count", 2));
-        double offsetX = section.getDouble("offset-x", 0.2);
-        double offsetY = section.getDouble("offset-y", 0.3);
-        double offsetZ = section.getDouble("offset-z", 0.2);
-        double speed = section.getDouble("speed", 0.0);
+        String rawType = section.getString("particle");
+        Particle particle = parseParticleType(rawType, fallback.particle());
+        int count = Math.max(0, section.getInt("count", fallback.count()));
+        double offsetX = section.getDouble("offset-x", fallback.offsetX());
+        double offsetY = section.getDouble("offset-y", fallback.offsetY());
+        double offsetZ = section.getDouble("offset-z", fallback.offsetZ());
+        double speed = section.getDouble("speed", fallback.speed());
         return new ParticleEffect(particle, count, offsetX, offsetY, offsetZ, speed);
+    }
+
+    /**
+     * Same as {@link #parseParticleSection}, but reading from a raw
+     * {@link Map} instead — needed for "combo.tiers" entries, since each
+     * comes from {@code getMapList} rather than a proper
+     * {@link ConfigurationSection}.
+     */
+    private ParticleEffect parseParticleMap(Map<?, ?> map, ParticleEffect fallback) {
+        Particle particle = parseParticleType(
+                map.get("particle") instanceof String raw ? raw : null, fallback.particle());
+        int count = Math.max(0, (int) toDouble(map.get("count"), fallback.count()));
+        double offsetX = toDouble(map.get("offset-x"), fallback.offsetX());
+        double offsetY = toDouble(map.get("offset-y"), fallback.offsetY());
+        double offsetZ = toDouble(map.get("offset-z"), fallback.offsetZ());
+        double speed = toDouble(map.get("speed"), fallback.speed());
+        return new ParticleEffect(particle, count, offsetX, offsetY, offsetZ, speed);
+    }
+
+    private Particle parseParticleType(@Nullable String rawType, Particle fallback) {
+        if (rawType == null || rawType.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Particle.valueOf(rawType.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning("Invalid particle type '" + rawType + "', using the default instead.");
+            return fallback;
+        }
+    }
+
+    private double toDouble(@Nullable Object value, double defaultValue) {
+        return value instanceof Number number ? number.doubleValue() : defaultValue;
     }
 
     private double clamp01(double value) {
@@ -445,6 +518,37 @@ public class ConfigManager {
      */
     public EffectSet getDefaultDeathEffects() {
         return defaultDeathEffects;
+    }
+
+    /**
+     * Whether the duck-kill combo/streak system is active at all — no
+     * streak tracking, no arrow trails, no points multiplier.
+     */
+    public boolean isComboEnabled() {
+        return comboEnabled;
+    }
+
+    /**
+     * Max seconds allowed between two consecutive duck kills for a
+     * player's streak to keep climbing instead of resetting to zero.
+     */
+    public double getComboWindowSeconds() {
+        return comboWindowSeconds;
+    }
+
+    /**
+     * How often (in ticks) combo streaks are checked for expiry and
+     * every in-flight "combo arrow"'s trail is advanced.
+     */
+    public int getComboTickIntervalTicks() {
+        return comboTickIntervalTicks;
+    }
+
+    /**
+     * Every configured combo milestone, sorted ascending by threshold.
+     */
+    public List<ComboTier> getComboTiers() {
+        return comboTiers;
     }
 
     /**
