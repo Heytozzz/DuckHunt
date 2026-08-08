@@ -182,15 +182,18 @@ public class ComboManager {
 
     /**
      * Called when a player shoots an arrow: if they currently have an
-     * active combo tier, that arrow starts trailing its particle until
-     * it lands (see {@link #onArrowLanded}) or its chunk unloads.
+     * active combo tier <em>and that tier has a particle configured</em>,
+     * that arrow starts trailing it until it lands (see
+     * {@link #onArrowLanded}) or its chunk unloads. Tiers with no
+     * particle (config: {@code particle.particle: none}) grant their
+     * points bonus without any visual trail.
      */
     public void onArrowShot(Arrow arrow, Player shooter) {
         if (!config.isComboEnabled()) {
             return;
         }
         ComboTier tier = tierFor(getCombo(shooter));
-        if (tier == null) {
+        if (tier == null || tier.particle() == null) {
             return;
         }
         trackedArrows.put(arrow.getUniqueId(), tier.particle());
@@ -248,8 +251,9 @@ public class ComboManager {
 
     /**
      * Drops any streak that's gone quiet for longer than
-     * "combo.window-seconds", announcing it to the player if they're
-     * still online.
+     * "combo.window-seconds", announcing it to the player (in chat, plus
+     * a floating-text pop-up if that's their active display mode) and
+     * playing "combo.sound.lost-sound" if they're still online.
      */
     private void expireStaleCombos() {
         if (lastKillMillisByPlayer.isEmpty()) {
@@ -274,10 +278,40 @@ public class ComboManager {
             }
             Player player = plugin.getServer().getPlayer(id);
             if (player != null) {
-                plugin.getLangManager().send(player, "combo.broken", Placeholder.unparsed("combo", String.valueOf(combo)));
+                announceComboBroken(player, combo);
             } else if (name != null) {
                 plugin.getLogger().fine(name + "'s " + combo + "-kill duck combo expired while offline.");
             }
         }
+    }
+
+    /**
+     * Tells a player their streak just broke: always in chat, plus a
+     * floating-text pop-up too if "combo.display.mode" is currently set
+     * to {@link ComboDisplayMode#FLOATING_TEXT} (so that mode's players
+     * see the loss the same way they saw every kill leading up to it),
+     * and plays "combo.sound.lost-sound".
+     */
+    private void announceComboBroken(Player player, int combo) {
+        TagResolver placeholder = Placeholder.unparsed("combo", String.valueOf(combo));
+        plugin.getLangManager().send(player, "combo.broken", placeholder);
+        if (config.getComboDisplayMode() == ComboDisplayMode.FLOATING_TEXT) {
+            Component text = plugin.getLangManager().renderRaw(player, "combo.broken", placeholder);
+            FloatingComboText.show(plugin, player, text);
+        }
+        playComboLostSound(player);
+    }
+
+    /**
+     * Plays "combo.sound.lost-sound" to the player only, at a fixed
+     * pitch (unlike {@link #playComboSound}, a broken streak isn't part
+     * of a climbing sequence).
+     */
+    private void playComboLostSound(Player player) {
+        if (!config.isComboLostSoundEnabled()) {
+            return;
+        }
+        player.playSound(player.getLocation(), config.getComboLostSoundKey(),
+                (float) config.getComboLostSoundVolume(), (float) config.getComboLostSoundPitch());
     }
 }

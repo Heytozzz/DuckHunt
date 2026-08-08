@@ -144,19 +144,33 @@ in-memory per player, not persisted across restarts):
   zero. **Any** duck kill counts towards the streak — it doesn't need to
   qualify under `leaderboard.min-kill-distance` like leaderboard points
   do.
-- Reaching one of `combo.tiers` in `config.yml` gives every arrow you
+- Reaching one of `combo.tiers` in `config.yml` multiplies the points
+  your *qualifying* kills are worth by that tier's `points-multiplier`,
+  and — only if that tier sets a `particle` — gives every arrow you
   shoot from then on a trailing particle effect (until your streak drops
-  below that tier, or climbs into a higher one) and multiplies the
-  points your *qualifying* kills are worth by that tier's
-  `points-multiplier`.
-- Your current streak shows in your action bar on every kill; reaching a
-  new tier also sends a chat message, and losing a streak announces how
-  high it got.
+  below that tier, or climbs into a higher one). Set a tier's
+  `particle.particle` to `none` (as the bundled `x5` tier does) to grant
+  its points bonus with no visual trail at all — handy for a quiet entry
+  tier that only "unlocks" the trail at a flashier one further up.
+- Every kill that advances a streak plays `combo.sound.sound` (default a
+  custom key, `block.trial_spawner.spawn_item`) to that player only,
+  with its pitch climbing by `combo.sound.pitch-step` each kill and
+  wrapping back down to 1.0 once it'd reach 2.0. Losing a streak instead
+  plays a separate, fixed-pitch `combo.sound.lost-sound`.
+- How the current count is shown is controlled by `combo.display.mode`:
+  `chat`, `actionbar` (default), `title` (an invisible main line with the
+  count as the subtitle), or `floating-text` (drifts up and shrinks away
+  right in front of you, personal-only, landing with a small random
+  offset each time so a fast streak's pop-ups don't perfectly stack).
+  Reaching a new tier always sends a chat message on top of whichever
+  mode is active, and a broken streak is always announced in chat too —
+  plus, if `floating-text` is the active mode, one more pop-up for the
+  loss itself.
 
-Example default tiers: `5` kills → 1.2x points, `10` kills → 1.5x points
-plus a flame trail, `20` kills → 2x points plus an end rod trail. Add,
-remove, or restyle tiers freely — each one's `particle` is optional and
-falls back to `combo.default-particle` if omitted.
+Example default tiers: `5` kills → 1.2x points (no trail), `10` kills →
+1.5x points plus a flame trail, `20` kills → 2x points plus an end rod
+trail. Add, remove, or restyle tiers freely — each one's `particle` is
+optional and falls back to `combo.default-particle` if omitted.
 
 ## Leaderboard
 

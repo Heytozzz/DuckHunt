@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
 
 /**
  * Loads settings from config.yml: duck stats, spawn defaults,
@@ -78,6 +80,11 @@ public class ConfigManager {
     private double comboSoundVolume;
     private double comboSoundPitchStep;
 
+    private boolean comboLostSoundEnabled;
+    private String comboLostSoundKey;
+    private double comboLostSoundVolume;
+    private double comboLostSoundPitch;
+
     private ComboDisplayMode comboDisplayMode;
     private double comboFloatingTextDistance;
     private double comboFloatingTextSpread;
@@ -118,6 +125,12 @@ public class ConfigManager {
         rareParticleIntervalTicks = Math.max(1, config.getInt("duck.rare.particle-interval-ticks", 4));
         rareDuckParticle = parseParticleSection(
                 config.getConfigurationSection("duck.rare.particle"), DEFAULT_RARE_PARTICLE);
+        if (rareDuckParticle == null) {
+            // Unlike combo tiers, a rare duck is always meant to stand
+            // out visually — "particle: none" isn't a supported way to
+            // hide it, use "duck.rare.enabled: false" instead.
+            rareDuckParticle = DEFAULT_RARE_PARTICLE;
+        }
 
         defaultDuckAmount = Math.max(1, config.getInt("spawn.default-amount", 1));
         instantRespawn = config.getBoolean("spawn.instant-respawn", false);
@@ -163,6 +176,11 @@ public class ConfigManager {
         comboSoundKey = config.getString("combo.sound.sound", "block.trial_spawner.spawn_item");
         comboSoundVolume = Math.max(0.0, config.getDouble("combo.sound.volume", 1.0));
         comboSoundPitchStep = config.getDouble("combo.sound.pitch-step", 0.1);
+
+        comboLostSoundEnabled = config.getBoolean("combo.sound.lost-enabled", true);
+        comboLostSoundKey = config.getString("combo.sound.lost-sound", "entity.villager.no");
+        comboLostSoundVolume = Math.max(0.0, config.getDouble("combo.sound.lost-volume", 1.0));
+        comboLostSoundPitch = config.getDouble("combo.sound.lost-pitch", 1.0);
 
         comboDisplayMode = ComboDisplayMode.parse(config.getString("combo.display.mode"));
         if (comboDisplayMode == null) {
@@ -243,6 +261,9 @@ public class ConfigManager {
      * order to find a streak's highest qualifying tier.
      */
     private List<ComboTier> parseComboTiers(FileConfiguration config) {
+        // null here means "combo.default-particle" explicitly says
+        // "none" (or the section is missing and there's no sensible
+        // built-in default) — tiers that don't override it get no trail.
         ParticleEffect defaultParticle =
                 parseParticleSection(config.getConfigurationSection("combo.default-particle"), DEFAULT_COMBO_PARTICLE);
 
@@ -268,18 +289,28 @@ public class ConfigManager {
      * (used for both "duck.rare.particle" and "combo.default-particle" —
      * same shape as one entry of an {@link EffectSet}'s particle list,
      * just not wrapped in a list since there's always exactly one).
+     *
+     * @param fallback used for any field the section doesn't set of its
+     *                  own (including when {@code section} itself is
+     *                  {@code null}); may be {@code null}.
+     * @return {@code null} if the section explicitly sets
+     * {@code particle: none}, or if there's no particle type to fall
+     * back on — meaning "no particle at all", not "use some default".
      */
-    private ParticleEffect parseParticleSection(@Nullable ConfigurationSection section, ParticleEffect fallback) {
+    @Nullable
+    private ParticleEffect parseParticleSection(@Nullable ConfigurationSection section, @Nullable ParticleEffect fallback) {
         if (section == null) {
             return fallback;
         }
-        String rawType = section.getString("particle");
-        Particle particle = parseParticleType(rawType, fallback.particle());
-        int count = Math.max(0, section.getInt("count", fallback.count()));
-        double offsetX = section.getDouble("offset-x", fallback.offsetX());
-        double offsetY = section.getDouble("offset-y", fallback.offsetY());
-        double offsetZ = section.getDouble("offset-z", fallback.offsetZ());
-        double speed = section.getDouble("speed", fallback.speed());
+        Particle particle = parseParticleType(section.getString("particle"), fallbackType(fallback));
+        if (particle == null) {
+            return null;
+        }
+        int count = Math.max(0, section.getInt("count", fallbackInt(fallback, ParticleEffect::count, 2)));
+        double offsetX = section.getDouble("offset-x", fallbackDouble(fallback, ParticleEffect::offsetX, 0.0));
+        double offsetY = section.getDouble("offset-y", fallbackDouble(fallback, ParticleEffect::offsetY, 0.0));
+        double offsetZ = section.getDouble("offset-z", fallbackDouble(fallback, ParticleEffect::offsetZ, 0.0));
+        double speed = section.getDouble("speed", fallbackDouble(fallback, ParticleEffect::speed, 0.0));
         return new ParticleEffect(particle, count, offsetX, offsetY, offsetZ, speed);
     }
 
@@ -287,25 +318,57 @@ public class ConfigManager {
      * Same as {@link #parseParticleSection}, but reading from a raw
      * {@link Map} instead — needed for "combo.tiers" entries, since each
      * comes from {@code getMapList} rather than a proper
-     * {@link ConfigurationSection}.
+     * {@link ConfigurationSection}. Same {@code null} handling.
      */
-    private ParticleEffect parseParticleMap(Map<?, ?> map, ParticleEffect fallback) {
+    @Nullable
+    private ParticleEffect parseParticleMap(Map<?, ?> map, @Nullable ParticleEffect fallback) {
         Particle particle = parseParticleType(
-                map.get("particle") instanceof String raw ? raw : null, fallback.particle());
-        int count = Math.max(0, (int) toDouble(map.get("count"), fallback.count()));
-        double offsetX = toDouble(map.get("offset-x"), fallback.offsetX());
-        double offsetY = toDouble(map.get("offset-y"), fallback.offsetY());
-        double offsetZ = toDouble(map.get("offset-z"), fallback.offsetZ());
-        double speed = toDouble(map.get("speed"), fallback.speed());
+                map.get("particle") instanceof String raw ? raw : null, fallbackType(fallback));
+        if (particle == null) {
+            return null;
+        }
+        int count = Math.max(0, (int) toDouble(map.get("count"), fallbackInt(fallback, ParticleEffect::count, 2)));
+        double offsetX = toDouble(map.get("offset-x"), fallbackDouble(fallback, ParticleEffect::offsetX, 0.0));
+        double offsetY = toDouble(map.get("offset-y"), fallbackDouble(fallback, ParticleEffect::offsetY, 0.0));
+        double offsetZ = toDouble(map.get("offset-z"), fallbackDouble(fallback, ParticleEffect::offsetZ, 0.0));
+        double speed = toDouble(map.get("speed"), fallbackDouble(fallback, ParticleEffect::speed, 0.0));
         return new ParticleEffect(particle, count, offsetX, offsetY, offsetZ, speed);
     }
 
-    private Particle parseParticleType(@Nullable String rawType, Particle fallback) {
+    @Nullable
+    private Particle fallbackType(@Nullable ParticleEffect fallback) {
+        return fallback != null ? fallback.particle() : null;
+    }
+
+    private int fallbackInt(@Nullable ParticleEffect fallback, ToIntFunction<ParticleEffect> getter, int ifNull) {
+        return fallback != null ? getter.applyAsInt(fallback) : ifNull;
+    }
+
+    private double fallbackDouble(@Nullable ParticleEffect fallback, ToDoubleFunction<ParticleEffect> getter, double ifNull) {
+        return fallback != null ? getter.applyAsDouble(fallback) : ifNull;
+    }
+
+    /**
+     * Resolves a particle type string.
+     *
+     * @param rawType  the config value, e.g. "end_rod" or "none".
+     * @param fallback used when {@code rawType} is null/blank (key
+     *                 omitted) or invalid; may itself be {@code null}.
+     * @return {@code null} if {@code rawType} is literally {@code "none"}
+     * (an explicit "no particle"), or if it's omitted/invalid and
+     * {@code fallback} is also {@code null}.
+     */
+    @Nullable
+    private Particle parseParticleType(@Nullable String rawType, @Nullable Particle fallback) {
         if (rawType == null || rawType.isBlank()) {
             return fallback;
         }
+        String trimmed = rawType.trim();
+        if (trimmed.equalsIgnoreCase("none")) {
+            return null;
+        }
         try {
-            return Particle.valueOf(rawType.trim().toUpperCase(Locale.ROOT));
+            return Particle.valueOf(trimmed.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             plugin.getLogger().warning("Invalid particle type '" + rawType + "', using the default instead.");
             return fallback;
@@ -607,6 +670,30 @@ public class ConfigManager {
      */
     public double getComboSoundPitchStep() {
         return comboSoundPitchStep;
+    }
+
+    /**
+     * Whether a sound plays once when a player's streak expires (see
+     * {@link #getComboLostSoundKey()}).
+     */
+    public boolean isComboLostSoundEnabled() {
+        return comboLostSoundEnabled;
+    }
+
+    /**
+     * Sound key played when a streak breaks (vanilla shorthand or a
+     * custom "namespace:key", same as an {@link EffectSet} sound).
+     */
+    public String getComboLostSoundKey() {
+        return comboLostSoundKey;
+    }
+
+    public double getComboLostSoundVolume() {
+        return comboLostSoundVolume;
+    }
+
+    public double getComboLostSoundPitch() {
+        return comboLostSoundPitch;
     }
 
     /**

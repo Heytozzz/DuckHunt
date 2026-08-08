@@ -22,7 +22,7 @@ duck:
   # that from a plugin, so it's left out of the default pool. Add it
   # back at your own risk if you're fine with players only being able
   # to melee it.
-  types: [ZOMBIE, HUSK, SKELETON, DROWNED, WITHER_SKELETON, WITCH, CREEPER, ZOMBIFIED_PIGLIN, VINDICATOR, PILLAGER, EVOKER, BLAZE, CHICKEN, GOAT]
+  types: [ZOMBIE, HUSK, SKELETON, WITHER_SKELETON, WITCH, CREEPER, ZOMBIFIED_PIGLIN, VINDICATOR, PILLAGER, EVOKER, BLAZE, EVOKER, HUSK, BOGGED, STRAY]
   # Max health / current health of the duck. Lower = dies in fewer hits.
   health: 1.0
   # Each duck's movement speed is randomly rolled in this range (applied
@@ -69,7 +69,7 @@ duck:
     # extra motion/data value.
     particle:
       particle: end_rod
-      count: 2
+      count: 4
       offset-x: 0.2
       offset-y: 0.3
       offset-z: 0.2
@@ -137,8 +137,12 @@ combo:
   tick-interval-ticks: 4
   # Fallback particle for any tier below that doesn't set its own
   # "particle" section. Same shape as one entry under "effects" above.
+  # Use "particle: none" to mean "no trail at all" instead of an actual
+  # particle — that's what the default below does: reaching the x5 tier
+  # only grants its points bonus, with the trail itself only kicking in
+  # once a higher tier (x10+) explicitly sets its own "particle".
   default-particle:
-    particle: crit
+    particle: none
     count: 2
     offset-x: 0.05
     offset-y: 0.05
@@ -182,6 +186,13 @@ combo:
     # How much the pitch climbs per kill, e.g. with the default 0.1:
     # kill 1 -> 1.0, kill 2 -> 1.1, ... kill 11 wraps back to 1.0.
     pitch-step: 0.1
+    # A separate, one-off sound that plays (to that player only) the
+    # moment their streak breaks — unlike the climbing sound above, this
+    # one always plays at a fixed pitch.
+    lost-enabled: true
+    lost-sound: entity.villager.no
+    lost-volume: 1.0
+    lost-pitch: 1.0
   # How the current streak count ("Combo: xN") is shown to the killer.
   # Every mode below shows the exact same text, just through a
   # different channel:
@@ -191,9 +202,11 @@ combo:
   #                   count as its subtitle.
   #   floating-text - text that floats upward and shrinks away right in
   #                   front of the killer, landing with a random
-  #                   left/right/up/down offset each time.
+  #                   left/right/up/down offset each time. Also used to
+  #                   announce a broken streak, on top of the chat
+  #                   message that mode always gets too.
   display:
-    mode: actionbar
+    mode: floating-text
     # Only used when mode is "floating-text":
     floating-text:
       # How far in front of the killer's eyes (in blocks) it appears.
@@ -202,9 +215,9 @@ combo:
       # directly in front of them.
       spread: 0.4
       # How many blocks it drifts upward before disappearing.
-      rise: 0.6
+      rise: 0.85
       # How long (in ticks) the float-up-and-shrink animation takes.
-      duration-ticks: 24
+      duration-ticks: 30
 
 # Broadcasts a message whenever a duck is killed (independent from
 # whether that kill counted towards the leaderboard above).
